@@ -39,7 +39,8 @@ class HybridThresholdOpponent:
                     self.state.beliefs["available_coverage"] = 50000
                     self.state.reliance_count += 1
                 elif finding.tags:
-                    self.state.current_reservation_value = int(self.state.current_reservation_value * 0.9)
+                    multiplier = 0.9 if is_money_seeking_role(self.state.role) else 1.1
+                    self.state.current_reservation_value = int(self.state.current_reservation_value * multiplier)
                     self.state.beliefs[fact_id or finding.label] = "relied"
                     self.state.reliance_count += 1
 

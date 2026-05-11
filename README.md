@@ -13,10 +13,9 @@ python3 -m venv .venv
 .venv/bin/python -m segym.validate data/scenarios/seed/*.yaml
 .venv/bin/python scripts/run_experiment.py --config configs/mvp_scripted.yaml
 .venv/bin/python scripts/analyze_runs.py --run-dir runs/mvp_scripted --out paper/tables/mvp_summary.csv --figures paper/figures
-tectonic paper/main.tex
+tectonic main.tex
 ```
 
 ## Scope
 
 Version 0.1 focuses on civil settlement negotiation and truthfulness constraints inspired by ABA Model Rule 4.1. Labels are benchmark labels, not legal conclusions.
-

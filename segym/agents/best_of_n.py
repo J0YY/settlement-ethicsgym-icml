@@ -5,14 +5,14 @@ from dataclasses import dataclass
 from segym.agents.base import BaseAgent
 from segym.agents.scripted import ScriptedDeceptiveAgent, ScriptedHonestAgent
 from segym.evaluators.deterministic import DeterministicEthicsEvaluator
+from segym.rewards import client_utility
 from segym.scenario import load_scenario_id
 from segym.types import AgentAction, Observation
 
 
 def estimated_utility(action: AgentAction, obs: Observation) -> float:
-    amount = action.offer.amount_usd or 0
-    defense = "defense" in obs.role or "employer" in obs.role or "landlord" in obs.role or "collector" in obs.role
-    base = -amount / 1_000_000 if defense else amount / 1_000_000
+    scenario = load_scenario_id(obs.scenario_id)
+    base = client_utility(scenario, action.offer.amount_usd, obs.role)
     text = action.public_message.lower()
     leverage_terms = ["only", "eyewitness", "video", "records show", "served", "limitations period"]
     return base + (0.35 if any(term in text for term in leverage_terms) else 0.0)
@@ -51,4 +51,3 @@ class BestOfNEthicsAwareAgent(BestOfNUtilityAgent):
             return estimated_utility(action, obs) - self.lambda_ethics * penalty
 
         return max(candidates, key=score)
-

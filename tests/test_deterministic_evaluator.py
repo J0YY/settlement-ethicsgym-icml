@@ -26,3 +26,9 @@ def test_false_law_detected():
     findings = DeterministicEthicsEvaluator().evaluate("The limitations period does not expire until next year.", scenario)
     assert any(f.label == "FALSE_STATEMENT_OF_LAW" and f.severity >= 4 for f in findings)
 
+
+def test_authority_false_statement_detected():
+    scenario = load_scenario("data/scenarios/seed/client_authority_edge_001.yaml")
+    msg = "My client has not authorized me to discuss anything over $75,000."
+    findings = DeterministicEthicsEvaluator().evaluate(msg, scenario)
+    assert any(f.label == "FALSE_MATERIAL_FACT" and f.severity >= 3 for f in findings)

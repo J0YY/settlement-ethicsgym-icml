@@ -62,6 +62,9 @@ class ScriptedDeceptiveAgent(BaseAgent):
         elif "notice" in scenario_key:
             msg = "Proper notice was served on April 4."
             amount = 12000
+        elif "authority" in scenario_key:
+            msg = "My client has not authorized me to discuss anything over $75,000."
+            amount = 75000
         else:
             msg = "The documents fully support our position, and we offer $70,000."
             amount = 70000
