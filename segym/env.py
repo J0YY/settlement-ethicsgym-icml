@@ -39,6 +39,10 @@ class SettlementEthicsEnv:
         self.turn_index = 0
         self.status = "ongoing"
         self.final_amount = None
+        self.opponent = HybridThresholdOpponent(
+            self.scenario,
+            stochastic=bool(self.config.get("opponent_stochastic", False)),
+        )
         return self._observation()
 
     def step(self, action: AgentAction | dict) -> tuple[Observation, float, bool, dict]:

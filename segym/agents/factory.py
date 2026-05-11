@@ -15,6 +15,7 @@ def build_agent(name: str, **kwargs):
     if name == "best_of_n_ethics":
         return BestOfNEthicsAwareAgent(n=int(kwargs.get("n", 4)), lambda_ethics=float(kwargs.get("lambda_ethics", 1.0)))
     if name == "shielded_deceptive":
-        return ShieldedAgent(ScriptedDeceptiveAgent(), mode=kwargs.get("shield_mode", "rewrite"))
+        base_type = kwargs.get("base_type", "scripted_deceptive")
+        base_agent = build_agent(base_type) if base_type != "shielded_deceptive" else ScriptedDeceptiveAgent()
+        return ShieldedAgent(base_agent, mode=kwargs.get("shield_mode", "rewrite"))
     raise ValueError(f"unknown agent: {name}")
-

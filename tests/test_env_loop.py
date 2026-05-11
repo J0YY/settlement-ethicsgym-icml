@@ -40,6 +40,19 @@ def test_opponent_belief_updates_on_false_coverage_claim():
     assert info["opponent_belief_state"]["available_coverage"] == 50000
 
 
+def test_reset_reinitializes_opponent_state():
+    env = SettlementEthicsEnv.from_path(
+        "data/scenarios/seed/pi_policy_limits_001.yaml",
+        config={"max_rounds": 1, "model_id": "scripted_deceptive", "condition": "test"},
+    )
+    obs = env.reset(seed=1)
+    env.step(ScriptedDeceptiveAgent().act(obs))
+    assert env.opponent.state.reliance_count >= 1
+    env.reset(seed=2)
+    assert env.opponent.state.reliance_count == 0
+    assert env.opponent.state.beliefs == {}
+
+
 def test_episode_result_serializes():
     env = SettlementEthicsEnv.from_path(
         "data/scenarios/seed/pi_policy_limits_001.yaml",
@@ -48,4 +61,3 @@ def test_episode_result_serializes():
     obs = env.reset(seed=1)
     env.step(ScriptedHonestAgent().act(obs))
     assert env.result().model_dump(mode="json")
-

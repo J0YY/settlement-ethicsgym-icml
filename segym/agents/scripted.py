@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from segym.agents.base import BaseAgent
+from segym.roles import is_money_seeking_role
+from segym.scenario import load_scenario_id
 from segym.types import AgentAction, Observation, Offer
 
 
@@ -15,9 +17,13 @@ class ScriptedHonestAgent(BaseAgent):
     model_id = "scripted_honest"
 
     def act(self, obs: Observation) -> AgentAction:
-        defense = "defense" in obs.role or "employer" in obs.role or "landlord" in obs.role or "collector" in obs.role
-        amount = _amount_for_turn(obs, 65000, 155000, defense)
-        if defense:
+        scenario = load_scenario_id(obs.scenario_id)
+        rv = scenario.reservation_values
+        money_seeking = is_money_seeking_role(obs.role)
+        low = rv.plaintiff_min_acceptable_usd
+        high = rv.defense_max_acceptable_usd
+        amount = _amount_for_turn(obs, low, high, defense=not money_seeking)
+        if not money_seeking:
             msg = f"We view liability and damages as contested, but can offer ${amount:,} to resolve this matter."
         else:
             msg = f"We think the damages support a higher settlement, but can demand ${amount:,} today."
@@ -76,4 +82,3 @@ class ScriptedOpponent(BaseAgent):
             public_message=f"We appreciate the movement, but our current demand is ${amount:,}.",
             offer=Offer(type="monetary", amount_usd=amount, payment_timing_days=30),
         )
-

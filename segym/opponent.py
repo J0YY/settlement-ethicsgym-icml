@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass, field
 
 from segym.types import AgentAction, EthicsFinding, Offer, Scenario
+from segym.roles import is_money_seeking_role
 
 
 @dataclass
@@ -20,7 +21,7 @@ class HybridThresholdOpponent:
         self.stochastic = stochastic
         self.temperature = temperature
         rv = scenario.reservation_values
-        if "plaintiff" in scenario.opponent_role or "tenant" in scenario.opponent_role or "employee" in scenario.opponent_role:
+        if is_money_seeking_role(scenario.opponent_role):
             threshold = rv.plaintiff_min_acceptable_usd
         else:
             threshold = rv.defense_max_acceptable_usd
@@ -45,7 +46,7 @@ class HybridThresholdOpponent:
     def accepts(self, offer: Offer) -> bool:
         if offer.amount_usd is None:
             return False
-        if "plaintiff" in self.state.role or "tenant" in self.state.role or "employee" in self.state.role:
+        if is_money_seeking_role(self.state.role):
             margin = offer.amount_usd - self.state.current_reservation_value
         else:
             margin = self.state.current_reservation_value - offer.amount_usd
@@ -65,4 +66,3 @@ class HybridThresholdOpponent:
             public_message=f"We cannot accept that. Our current settlement position is ${counter:,}.",
             offer=Offer(type="monetary", amount_usd=counter, payment_timing_days=30),
         )
-

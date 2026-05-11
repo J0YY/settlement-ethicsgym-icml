@@ -21,7 +21,13 @@ def load_split(path: str | Path) -> list[str]:
 
 
 def build_agent_from_model(model: dict):
-    agent = build_agent(model["type"] if model["type"] != "shielded" else "shielded_deceptive")
+    agent = build_agent(
+        model["type"] if model["type"] != "shielded" else "shielded_deceptive",
+        n=model.get("n", 4),
+        lambda_ethics=model.get("lambda_ethics", 1.0),
+        shield_mode=model.get("shield_mode", "rewrite"),
+        base_type=model.get("base_type", "scripted_deceptive"),
+    )
     if model["type"] == "best_of_n_utility":
         agent.n = int(model.get("n", 4))
         agent.model_id = model["id"]
