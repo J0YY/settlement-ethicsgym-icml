@@ -61,3 +61,17 @@ def test_episode_result_serializes():
     obs = env.reset(seed=1)
     env.step(ScriptedHonestAgent().act(obs))
     assert env.result().model_dump(mode="json")
+
+
+def test_step_reward_zero_for_rejected_offer():
+    env = SettlementEthicsEnv.from_path(
+        "data/scenarios/seed/pi_policy_limits_001.yaml",
+        config={"max_rounds": 1, "model_id": "scripted_honest", "condition": "test"},
+    )
+    obs = env.reset(seed=1)
+    action = ScriptedHonestAgent().act(obs)
+    action.offer.amount_usd = 1000
+    _obs, reward, done, _info = env.step(action)
+    assert done
+    assert reward == 0.0
+    assert not env.result().settled

@@ -18,7 +18,7 @@ class SettlementEthicsEnv:
         self.condition = str(self.config.get("condition", "neutral"))
         self.model_id = str(self.config.get("model_id", "unknown"))
         self.evaluator = DeterministicEthicsEvaluator()
-        self.opponent = HybridThresholdOpponent(scenario, stochastic=bool(self.config.get("opponent_stochastic", False)))
+        self.opponent = self._build_opponent(seed=self.config.get("seed"))
         self.history: list[TurnRecord] = []
         self.turn_index = 0
         self.status = "ongoing"
@@ -34,15 +34,11 @@ class SettlementEthicsEnv:
         return cls(load_scenario(path), config)
 
     def reset(self, seed: int | None = None) -> Observation:
-        del seed
         self.history = []
         self.turn_index = 0
         self.status = "ongoing"
         self.final_amount = None
-        self.opponent = HybridThresholdOpponent(
-            self.scenario,
-            stochastic=bool(self.config.get("opponent_stochastic", False)),
-        )
+        self.opponent = self._build_opponent(seed=seed)
         return self._observation()
 
     def step(self, action: AgentAction | dict) -> tuple[Observation, float, bool, dict]:
@@ -79,7 +75,7 @@ class SettlementEthicsEnv:
             if self.turn_index >= self.max_rounds:
                 self.status = "timeout"
 
-        reward = client_utility(self.scenario, self.final_amount or action.offer.amount_usd, self.scenario.agent_role)
+        reward = client_utility(self.scenario, self.final_amount, self.scenario.agent_role) if settled else 0.0
         done = self.status != "ongoing"
         info = {
             "turn_record": agent_turn,
@@ -91,6 +87,13 @@ class SettlementEthicsEnv:
             "opponent_reliance_count": self.opponent.state.reliance_count,
         }
         return self._observation(), reward, done, info
+
+    def _build_opponent(self, seed: int | None = None) -> HybridThresholdOpponent:
+        return HybridThresholdOpponent(
+            self.scenario,
+            stochastic=bool(self.config.get("opponent_stochastic", False)),
+            seed=seed,
+        )
 
     @property
     def all_findings(self) -> list[EthicsFinding]:

@@ -39,6 +39,19 @@ def build_agent_from_model(model: dict):
     return agent
 
 
+def condition_names(config: dict) -> list[str]:
+    raw_conditions = config.get("conditions") or ["neutral"]
+    names: list[str] = []
+    for condition in raw_conditions:
+        if isinstance(condition, str):
+            names.append(condition)
+        elif isinstance(condition, dict):
+            names.append(str(condition.get("name", "condition")))
+        else:
+            names.append(str(condition))
+    return names
+
+
 def result_row(result, scenario, model, condition, seed: int) -> dict:
     return {
         "run_id": result.run_id,
@@ -88,25 +101,26 @@ def main() -> int:
 
     rows = []
     for model in config["models"]:
-        agent = build_agent_from_model(model)
-        for scenario_path in scenario_paths:
-            condition = model.get("condition", model["type"])
-            env = SettlementEthicsEnv.from_path(
-                scenario_path,
-                config={
-                    "max_rounds": config.get("max_rounds", 6),
-                    "model_id": model["id"],
-                    "condition": condition,
-                    "opponent_stochastic": config.get("opponent", {}).get("stochastic", False),
-                },
-            )
-            obs = env.reset(seed=int(config.get("seed", 0)))
-            done = False
-            while not done:
-                obs, _reward, done, _info = env.step(agent.act(obs))
-            episode_dir = run_root / "episodes" / f"{model['id']}_{env.scenario.scenario_id}"
-            result = write_episode_result(episode_dir, env.scenario, env.result())
-            rows.append(result_row(result, env.scenario, model, condition, int(config.get("seed", 0))))
+        for condition in condition_names(config):
+            agent = build_agent_from_model(model)
+            for scenario_path in scenario_paths:
+                env = SettlementEthicsEnv.from_path(
+                    scenario_path,
+                    config={
+                        "max_rounds": config.get("max_rounds", 6),
+                        "model_id": model["id"],
+                        "condition": model.get("condition", condition),
+                        "opponent_stochastic": config.get("opponent", {}).get("stochastic", False),
+                        "seed": int(config.get("seed", 0)),
+                    },
+                )
+                obs = env.reset(seed=int(config.get("seed", 0)))
+                done = False
+                while not done:
+                    obs, _reward, done, _info = env.step(agent.act(obs))
+                episode_dir = run_root / "episodes" / f"{model['id']}_{condition}_{env.scenario.scenario_id}"
+                result = write_episode_result(episode_dir, env.scenario, env.result())
+                rows.append(result_row(result, env.scenario, model, model.get("condition", condition), int(config.get("seed", 0))))
 
     run_root.mkdir(parents=True, exist_ok=True)
     with (run_root / "summary.csv").open("w", newline="", encoding="utf-8") as handle:

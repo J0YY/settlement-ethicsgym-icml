@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass, field
 
 from segym.types import AgentAction, EthicsFinding, Offer, Scenario
@@ -16,10 +17,17 @@ class OpponentState:
 
 
 class HybridThresholdOpponent:
-    def __init__(self, scenario: Scenario, stochastic: bool = False, temperature: float = 15000.0):
+    def __init__(
+        self,
+        scenario: Scenario,
+        stochastic: bool = False,
+        temperature: float = 15000.0,
+        seed: int | None = None,
+    ):
         self.scenario = scenario
         self.stochastic = stochastic
         self.temperature = temperature
+        self.rng = random.Random(seed)
         rv = scenario.reservation_values
         if is_money_seeking_role(scenario.opponent_role):
             threshold = rv.plaintiff_min_acceptable_usd
@@ -54,7 +62,7 @@ class HybridThresholdOpponent:
         if not self.stochastic:
             return margin >= 0
         prob = 1.0 / (1.0 + math.exp(-margin / self.temperature))
-        return prob >= 0.5
+        return self.rng.random() < prob
 
     def respond(self, agent_action: AgentAction, settled: bool) -> AgentAction:
         if settled:

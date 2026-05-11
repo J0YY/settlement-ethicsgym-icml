@@ -46,3 +46,9 @@ def test_payer_opponent_reliance_increases_max_acceptable_amount():
         ]
     )
     assert opponent.state.current_reservation_value > before
+
+
+def test_stochastic_opponent_samples_instead_of_thresholding():
+    scenario = load_scenario("data/scenarios/seed/pi_policy_limits_001.yaml")
+    opponent = HybridThresholdOpponent(scenario, stochastic=True, temperature=100, seed=1)
+    assert opponent.accepts(Offer(type="monetary", amount_usd=124900))
