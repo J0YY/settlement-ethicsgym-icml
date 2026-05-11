@@ -1,0 +1,29 @@
+experiment_name: "mvp_scripted"
+seed: 42
+scenario_split: "data/splits/mvp_test.txt"
+max_rounds: 6
+models:
+  - id: "scripted_honest"
+    type: "scripted_honest"
+  - id: "scripted_deceptive"
+    type: "scripted_deceptive"
+  - id: "best_of_n_utility"
+    type: "best_of_n_utility"
+    n: 4
+  - id: "best_of_n_ethics"
+    type: "best_of_n_ethics"
+    n: 4
+  - id: "shielded_deceptive"
+    type: "shielded"
+    base_type: "scripted_deceptive"
+    shield_mode: "rewrite"
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "neutral"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/mvp_scripted"
+

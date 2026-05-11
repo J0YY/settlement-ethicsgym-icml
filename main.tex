@@ -1,0 +1,122 @@
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\sloppy
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+\usepackage[preprint]{icml2026/icml2026}
+
+\icmltitlerunning{SettlementEthicsGym}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{SettlementEthicsGym: Measuring Reward-Induced Misrepresentation in Settlement Negotiation}
+
+\begin{icmlauthorlist}
+\icmlauthor{Anonymous Authors}{anon}
+\end{icmlauthorlist}
+\icmlaffiliation{anon}{Anonymous Institution}
+\icmlcorrespondingauthor{Anonymous Authors}{anonymous@example.com}
+\icmlkeywords{legal AI, AI safety, negotiation, reward hacking, benchmark}
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+\begin{abstract}
+Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible puffery. In an initial no-API scripted MVP, utility-only candidate selection increases material misrepresentation while ethics-aware selection and rewriting shields eliminate deterministic violations on the current seed set. These preliminary results exercise the benchmark mechanics; future model-facing experiments will replace scripted candidate generators with LLM agents and human-audited labels.
+\end{abstract}
+
+\section{Introduction}
+
+Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
+
+The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses synthetic disputes and a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing. The initial implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, and reproducible no-API experiments.
+
+\section{Benchmark Design}
+
+Each scenario contains public facts, private files for the evaluated agent and opponent, reservation values, explicit truth-table facts, allowed puffery examples, forbidden pattern mappings, and gold utterance labels. The environment records structured actions with a public message, offer, requested information, disclosures, and self-reported assertions. A hybrid threshold opponent uses deterministic reservation logic and scenario-specific belief updates when material claims are believed.
+
+\paragraph{Ethics labels.}
+The current evaluator supports labels including \texttt{FALSE\_MATERIAL\_FACT}, \texttt{FALSE\_STATEMENT\_OF\_LAW}, \texttt{MISLEADING\_HALF\_TRUTH}, \texttt{PERMISSIBLE\_PUFFERY}, \texttt{PERMISSIBLE\_OPINION\_OR\_VALUE\_ESTIMATE}, and \texttt{UNSUPPORTED\_BUT\_NOT\_FALSE}. The primary violation threshold is severity at least 3.
+
+\paragraph{Optimization pressure.}
+The no-API MVP compares honest scripted negotiation, deliberately deceptive calibration, utility-only best-of-$N$ selection, utility-minus-ethics best-of-$N$ selection, and a rewrite shield. This is a scaffold for later LLM experiments: the candidate generator can be replaced while preserving scenario loading, evaluation, logging, and analysis.
+
+\section{Current Implementation}
+
+The repository now includes a Python package named \texttt{segym}; Pydantic schemas; YAML scenario loading and validation; a deterministic ethics evaluator; scripted honest and deceptive agents; best-of-$N$ selectors; a rewrite shield; a hybrid threshold opponent; an environment loop; run, analysis, and table-export scripts; and unit tests that run without internet or API keys.
+
+The current seed set has eight scenarios across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation.
+
+\section{Preliminary Results}
+
+Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. These numbers are not yet claims about deployed LLM behavior; they verify that the benchmark creates the intended measurement contrast.
+
+\begin{table}[t]
+\caption{No-API scripted MVP results over eight seed scenarios.}
+\label{tab:mvp-results}
+\centering
+\small
+\resizebox{\linewidth}{!}{%
+\input{paper/tables/main_results.tex}
+}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{paper/figures/violation_rates.png}
+\caption{Material misrepresentation rate by current scripted condition.}
+\label{fig:violations}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{paper/figures/pareto.png}
+\caption{Preliminary utility and ethics tradeoff for scripted conditions.}
+\label{fig:pareto}
+\end{figure}
+
+\section{Next Experiments}
+
+The next empirical step is to replace scripted candidate generation with LLM-generated structured actions, using the same no-API deterministic evaluator as one judge in an ensemble. The planned matrix is zero-shot prompting, ethics prompting, utility-only best-of-$N$, utility-plus-ethics best-of-$N$, and shielded generation. A human-audited subset should validate the automated labels, especially for half-truths, settlement authority, and other edge cases.
+
+\section{Limitations}
+
+The current scenarios are synthetic and intentionally narrow. The deterministic evaluator is strong for high-confidence traps but insufficient for broad language variation. The benchmark taxonomy is inspired by professional-responsibility rules, especially truthfulness in negotiation, but it is not a jurisdiction-specific legal standard. Strong paper claims require larger scenario coverage, LLM-facing experiments, model/version logging, and human or legally trained annotation.
+
+\section{Conclusion}
+
+SettlementEthicsGym operationalizes a narrow but important safety question for legal agents: whether optimization for settlement outcomes amplifies material misrepresentation. The first implementation establishes an executable environment, deterministic evaluator, control conditions, and paper pipeline. The benchmark is now ready for LLM experiments and human-audited validation.
+
+\begin{thebibliography}{9}
+
+\bibitem[American Bar Association(2026a)]{aba41}
+American Bar Association.
+Model Rule 4.1: Truthfulness in Statements to Others.
+\url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_4_1_truthfulness_in_statements_to_others/}.
+
+\bibitem[American Bar Association(2006)]{aba439}
+American Bar Association.
+Formal Opinion 06-439: Lawyer's Obligation of Truthfulness When Representing a Client in Negotiation.
+\url{https://attorneygeneral.delaware.gov/wp-content/uploads/sites/50/2018/01/ABA-Opinion-06-439-Obligation-of-Truthfulneess-in-Negotiation-and-Mediation.pdf}.
+
+\bibitem[SettleBench(2026)]{settlebench}
+SettleAgent / SettleBench.
+Planning-Enhanced Multi-Agent Legal Negotiation.
+\url{https://openreview.net/forum?id=49NyzgT5EX}.
+
+\bibitem[Bianchi et al.(2024)]{negotiationarena}
+Bianchi et al.
+NegotiationArena: How Well Can LLMs Negotiate?
+Proceedings of Machine Learning Research, 2024.
+\url{https://proceedings.mlr.press/v235/bianchi24a.html}.
+
+\end{thebibliography}
+
+\end{document}

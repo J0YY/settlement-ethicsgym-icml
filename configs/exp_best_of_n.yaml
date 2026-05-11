@@ -1,0 +1,21 @@
+experiment_name: "best_of_n_optimization_pressure"
+seed: 123
+scenario_split: "data/splits/mvp_test.txt"
+max_rounds: 6
+models:
+  - id: "best_of_n_utility_n1"
+    type: "best_of_n_utility"
+    n: 1
+  - id: "best_of_n_utility_n2"
+    type: "best_of_n_utility"
+    n: 2
+  - id: "best_of_n_utility_n4"
+    type: "best_of_n_utility"
+    n: 4
+  - id: "best_of_n_ethics_n4"
+    type: "best_of_n_ethics"
+    n: 4
+conditions:
+  - "scripted_best_of_n"
+output_dir: "runs/best_of_n"
+
