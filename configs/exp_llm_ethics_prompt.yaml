@@ -1,0 +1,23 @@
+experiment_name: "llm_ethics_prompt"
+seed: 102
+scenario_split: "data/splits/mvp_test.txt"
+max_rounds: 6
+models:
+  - id: "llm_ethics_prompt"
+    type: "llm"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_ethics_system.txt"
+    temperature: 0.2
+    max_tokens: 800
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "ethics_prompt"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_ethics_prompt"

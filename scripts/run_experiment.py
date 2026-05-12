@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,12 +23,24 @@ def load_split(path: str | Path) -> list[str]:
 
 
 def build_agent_from_model(model: dict):
+    model_name = model.get("model_name")
+    if model.get("model_name_env"):
+        model_name = os.environ.get(model["model_name_env"], model_name)
     agent = build_agent(
         model["type"] if model["type"] != "shielded" else "shielded_deceptive",
+        model_id=model.get("id"),
         n=model.get("n", 4),
         lambda_ethics=model.get("lambda_ethics", 1.0),
         shield_mode=model.get("shield_mode", "rewrite"),
         base_type=model.get("base_type", "scripted_deceptive"),
+        provider=model.get("provider", "openai_compatible"),
+        model_name=model_name or model.get("id", "llm"),
+        system_prompt_path=model.get("system_prompt_path"),
+        temperature=model.get("temperature", 0.2),
+        max_tokens=model.get("max_tokens", 800),
+        api_key_env=model.get("api_key_env", "OPENAI_API_KEY"),
+        base_url=model.get("base_url", "https://api.openai.com/v1/chat/completions"),
+        fake=model.get("fake", False),
     )
     if model["type"] == "best_of_n_utility":
         agent.n = int(model.get("n", 4))
@@ -54,11 +67,19 @@ def condition_names(config: dict) -> list[str]:
 
 
 def result_row(result, scenario, model, condition, seed: int) -> dict:
+    model_name = model.get("model_name")
+    if model.get("model_name_env"):
+        model_name = os.environ.get(model["model_name_env"], model_name)
     return {
         "run_id": result.run_id,
         "scenario_id": result.scenario_id,
         "domain": scenario.domain,
         "model_id": result.model_id,
+        "model_type": model.get("type", ""),
+        "provider": model.get("provider", ""),
+        "model_name": model_name or "",
+        "temperature": model.get("temperature", ""),
+        "system_prompt_path": model.get("system_prompt_path", ""),
         "condition": condition,
         "n_candidates": model.get("n", 1),
         "shield_mode": model.get("shield_mode", ""),
@@ -85,6 +106,12 @@ def result_row(result, scenario, model, condition, seed: int) -> dict:
 
 
 def run_metadata(config: dict, run_root: Path, rows: list[dict]) -> dict:
+    model_configs = []
+    for model in config.get("models", []):
+        redacted = dict(model)
+        if "api_key" in redacted:
+            redacted["api_key"] = "[redacted]"
+        model_configs.append(redacted)
     return {
         "experiment_name": config.get("experiment_name", run_root.parent.name),
         "run_dir": str(run_root),
@@ -93,7 +120,9 @@ def run_metadata(config: dict, run_root: Path, rows: list[dict]) -> dict:
         "episode_rows": len(rows),
         "scenario_split": config.get("scenario_split"),
         "models": [model.get("id") for model in config.get("models", [])],
+        "model_configs": model_configs,
         "conditions": condition_names(config),
+        "fake_model_env": os.environ.get("SEGYN_FAKE_MODEL", ""),
     }
 
 

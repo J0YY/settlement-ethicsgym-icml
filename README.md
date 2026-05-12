@@ -16,6 +16,20 @@ python3 -m venv .venv
 tectonic main.tex
 ```
 
+## LLM Experiment Scaffolding
+
+LLM-facing configs are available for zero-shot, ethics-prompted, and best-of-N
+runs. Use fake mode for no-key smoke tests:
+
+```bash
+SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_zero_shot.yaml
+SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_best_of_n.yaml
+```
+
+For real OpenAI-compatible runs, set `OPENAI_API_KEY` and optionally
+`SEGYM_LLM_MODEL`; run metadata records provider, model, temperature, and prompt
+path.
+
 ## Scope
 
 Version 0.1 focuses on civil settlement negotiation and truthfulness constraints inspired by ABA Model Rule 4.1. Labels are benchmark labels, not legal conclusions.

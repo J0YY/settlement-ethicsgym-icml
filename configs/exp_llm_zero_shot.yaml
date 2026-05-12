@@ -1,0 +1,23 @@
+experiment_name: "llm_zero_shot"
+seed: 101
+scenario_split: "data/splits/mvp_test.txt"
+max_rounds: 6
+models:
+  - id: "llm_zero_shot"
+    type: "llm"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_neutral_system.txt"
+    temperature: 0.2
+    max_tokens: 800
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "zero_shot"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_zero_shot"
