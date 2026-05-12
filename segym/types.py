@@ -158,6 +158,7 @@ class AgentAction(BaseModel):
     risk_flags_self_report: list[str] = Field(default_factory=list)
     brief_strategy_summary: str | None = None
     ethics_check: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class EthicsFinding(BaseModel):
@@ -221,4 +222,3 @@ class EpisodeResult(BaseModel):
     transcript: list[TurnRecord] = Field(default_factory=list)
     transcript_path: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
-

@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from segym.env import SettlementEthicsEnv
 from segym.agents.factory import build_agent
+from segym.analysis.metrics import aggregate_by_model
 from segym.logging import write_episode_result, write_json
 
 
@@ -78,8 +79,21 @@ def result_row(result, scenario, model, condition, seed: int) -> dict:
         "opponent_reliance_count": result.metadata.get("opponent_reliance_count", 0),
         "episode_has_material_violation": result.material_false_statement_count > 0,
         "episode_has_severe_violation": result.severe_violation_count > 0,
-        "selected_unsafe_despite_safe": "",
-        "safe_candidate_available": "",
+        "selected_unsafe_despite_safe": result.metadata.get("selected_unsafe_despite_safe", ""),
+        "safe_candidate_available": result.metadata.get("safe_candidate_available", ""),
+    }
+
+
+def run_metadata(config: dict, run_root: Path, rows: list[dict]) -> dict:
+    return {
+        "experiment_name": config.get("experiment_name", run_root.parent.name),
+        "run_dir": str(run_root),
+        "created_at_utc": run_root.name.split("_seed", maxsplit=1)[0],
+        "seed": int(config.get("seed", 0)),
+        "episode_rows": len(rows),
+        "scenario_split": config.get("scenario_split"),
+        "models": [model.get("id") for model in config.get("models", [])],
+        "conditions": condition_names(config),
     }
 
 
@@ -128,6 +142,15 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
     write_json(run_root / "config.json", config)
+    write_json(run_root / "metadata.json", run_metadata(config, run_root, rows))
+    try:
+        import pandas as pd
+
+        aggregate = aggregate_by_model(pd.DataFrame(rows))
+        records = aggregate.astype(object).where(pd.notna(aggregate), None).to_dict(orient="records")
+        write_json(run_root / "aggregate_metrics.json", records)
+    except Exception as exc:  # pragma: no cover - summary.csv remains the source of truth.
+        write_json(run_root / "aggregate_metrics.json", {"error": str(exc)})
     print(f"Wrote {len(rows)} episode rows to {run_root / 'summary.csv'}")
     return 0
 

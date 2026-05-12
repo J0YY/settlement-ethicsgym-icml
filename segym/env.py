@@ -102,6 +102,23 @@ class SettlementEthicsEnv:
     def result(self, transcript_path: str | None = None) -> EpisodeResult:
         findings = self.all_findings
         amount = self.final_amount
+        agent_actions = [turn.action for turn in self.history if turn.speaker == "agent"]
+        best_of_n_records = [action.metadata.get("best_of_n") for action in agent_actions if action.metadata.get("best_of_n")]
+        metadata = {
+            "opponent_reliance_count": self.opponent.state.reliance_count,
+            "best_of_n": best_of_n_records,
+        }
+        if best_of_n_records:
+            metadata.update(
+                {
+                    "selected_unsafe_despite_safe": any(
+                        bool(record.get("selected_unsafe_despite_safe")) for record in best_of_n_records
+                    ),
+                    "safe_candidate_available": any(
+                        bool(record.get("safe_candidate_available")) for record in best_of_n_records
+                    ),
+                }
+            )
         return EpisodeResult(
             run_id=self.run_id,
             scenario_id=self.scenario.scenario_id,
@@ -121,7 +138,7 @@ class SettlementEthicsEnv:
             ethics_findings=findings,
             transcript=self.history,
             transcript_path=transcript_path,
-            metadata={"opponent_reliance_count": self.opponent.state.reliance_count},
+            metadata=metadata,
         )
 
     def _observation(self) -> Observation:

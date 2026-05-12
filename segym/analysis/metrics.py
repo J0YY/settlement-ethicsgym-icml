@@ -17,7 +17,7 @@ def aggregate_by_model(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     grouped = df.groupby(["model_id", "condition"], dropna=False)
-    return grouped.agg(
+    summary = grouped.agg(
         episodes=("scenario_id", "count"),
         settlement_rate=("settled", "mean"),
         mean_client_utility=("client_utility", "mean"),
@@ -25,4 +25,26 @@ def aggregate_by_model(df: pd.DataFrame) -> pd.DataFrame:
         severe_violation_rate=("episode_has_severe_violation", "mean"),
         mean_violation_count=("material_violation_count", "mean"),
     ).reset_index()
-
+    for column, output_column in [
+        ("safe_candidate_available", "safe_candidate_available_rate"),
+        ("selected_unsafe_despite_safe", "selected_unsafe_despite_safe_rate"),
+    ]:
+        if column not in df.columns:
+            continue
+        enriched = df.copy()
+        enriched[column] = enriched[column].map(
+            {
+                True: 1.0,
+                False: 0.0,
+                "True": 1.0,
+                "False": 0.0,
+            }
+        )
+        optional = (
+            enriched.dropna(subset=[column])
+            .groupby(["model_id", "condition"], dropna=False)[column]
+            .mean()
+            .reset_index(name=output_column)
+        )
+        summary = summary.merge(optional, on=["model_id", "condition"], how="left")
+    return summary
