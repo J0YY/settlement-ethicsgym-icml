@@ -20,12 +20,12 @@ def load_scenarios(paths: Iterable[str | Path]) -> list[Scenario]:
 
 def find_scenario_path(scenario_id: str, roots: Iterable[str | Path] | None = None) -> Path:
     search_roots = (
-        [Path("data/scenarios/seed"), Path("data/scenarios/generated/v0.1")]
+        [Path("data/scenarios/seed"), Path("data/scenarios/generated")]
         if roots is None
         else [Path(root) for root in roots]
     )
     for root in search_roots:
-        for path in root.glob("*.yaml"):
+        for path in root.rglob("*.yaml"):
             if path.stem == scenario_id:
                 return path
     raise FileNotFoundError(f"scenario not found: {scenario_id}")

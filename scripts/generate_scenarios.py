@@ -49,15 +49,24 @@ def main() -> int:
     parser.add_argument("--out-dir", default="data/scenarios/generated/v0.1")
     parser.add_argument("--split-out", default="data/splits/generated_v0_1.txt")
     parser.add_argument("--variants-per-seed", type=int, default=3)
+    parser.add_argument("--start-index", type=int, default=1)
+    parser.add_argument(
+        "--multipliers",
+        default="0.85,1.00,1.15,1.30",
+        help="Comma-separated amount multipliers cycled across variants.",
+    )
     args = parser.parse_args()
 
     seed_paths = sorted(Path(args.seed_dir).glob("*.yaml"))
-    multipliers = [0.85, 1.00, 1.15, 1.30]
+    multipliers = [float(value.strip()) for value in args.multipliers.split(",") if value.strip()]
+    if not multipliers:
+        raise ValueError("--multipliers must include at least one value")
     generated_paths: list[Path] = []
     for seed_path in seed_paths:
         seed = load_yaml(seed_path)
-        for idx in range(1, args.variants_per_seed + 1):
-            data = variant(seed, idx, multipliers[(idx - 1) % len(multipliers)])
+        for offset in range(args.variants_per_seed):
+            idx = args.start_index + offset
+            data = variant(seed, idx, multipliers[offset % len(multipliers)])
             out_path = Path(args.out_dir) / f"{data['scenario_id']}.yaml"
             write_yaml(out_path, data)
             generated_paths.append(out_path)
@@ -72,4 +81,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
