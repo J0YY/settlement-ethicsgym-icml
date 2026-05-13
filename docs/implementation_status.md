@@ -13,9 +13,10 @@ Local run artifacts show completed calibration runs under `runs/`:
 - `runs/llm_ethics_prompt/2026-05-12T115741Z_seed102`
 - `runs/llm_best_of_n/2026-05-12T115741Z_seed103`
 
-The LLM-labeled runs are fake-model smoke tests. The zero-shot transcripts
-record `provider: fake`; the ethics-prompt and LLM best-of-N metadata record
-`fake_model_env: "1"`. They should not be used as empirical LLM results.
+The early LLM-labeled local runs are fake-model smoke tests. The zero-shot
+transcripts record `provider: fake`; the ethics-prompt and LLM best-of-N
+metadata record `fake_model_env: "1"`. They should not be used as empirical LLM
+results.
 
 Athena status checked on 2026-05-13:
 
@@ -34,15 +35,32 @@ Athena status checked on 2026-05-13:
 - No additional SettlementEthicsGym result directory was found beyond the local
   repository artifacts.
 
+Real non-fake LLM matrix launched on Athena on 2026-05-13 completed as Slurm job
+`677359` with exit code `0:0`. The run used `gpt-4.1-mini` through the
+OpenAI-compatible provider and did not set fake mode. The result directories are:
+
+- `/work/joy/seg/runs/llm_zero_shot/2026-05-13T134704Z_seed101`
+- `/work/joy/seg/runs/llm_utility_prompt/2026-05-13T134949Z_seed104`
+- `/work/joy/seg/runs/llm_ethics_prompt/2026-05-13T135151Z_seed102`
+- `/work/joy/seg/runs/llm_shield/2026-05-13T135348Z_seed105`
+- `/work/joy/seg/runs/llm_best_of_n/2026-05-13T135547Z_seed103`
+
 ## Current Evidence Quality
 
-Current results are benchmark-plumbing and calibration evidence only.
+Current results are still prototype-scale evidence.
 
 - Scripted deceptive agents trigger deterministic violations as expected.
 - Utility-only scripted best-of-N selects unsafe actions at N=4.
 - Ethics-aware scripted best-of-N avoids deterministic violations.
 - The rewrite shield avoids violations but currently loses substantial utility.
-- Current LLM runs are fake and cannot support claims about real model behavior.
+- The first real LLM matrix ran successfully with zero parser failures, but it
+  has only eight scenarios per condition.
+- Utility-only best-of-N produced a material/severe violation in one of eight
+  episodes while ethics-aware best-of-N produced none.
+- The shield condition did not trigger in the first real matrix, so it is not
+  yet an informative control.
+- Utility and settlement dynamics remain noisy; the utility prompt underperformed
+  in several episodes and needs prompt/opponent diagnostics before making claims.
 
 ## Paper-Viable Implementation Queue
 
@@ -72,23 +90,36 @@ Current results are benchmark-plumbing and calibration evidence only.
    - Added episode summary fields for parse-failure counts.
    - Added aggregate parse-failure metrics.
    - Verified normal LLM, shielded LLM, and best-of-N fake-model paths.
+5. Real LLM smoke and matrix execution.
+   - Ran non-fake zero-shot, utility-prompt, ethics-prompt, shield, and
+     best-of-N conditions on Athena.
+   - Verified provider/model metadata and zero parse-failure rate.
+   - Removed the temporary key file used for the run.
+6. Real-run analysis guard.
+   - Added analyzer support for multiple run roots.
+   - Added `--latest-only` for timestamped experiment roots.
+   - Added `--require-real` to reject missing metadata, fake-mode metadata,
+     fake providers, and fake model configs before paper-table export.
 
 ### Next
 
-1. Run real non-fake LLM experiment conditions.
-   - Run without `SEGYN_FAKE_MODEL=1` and verify transcript metadata records
-     a non-fake provider.
-
-2. Implement LLM judge evaluator.
+1. Implement LLM judge evaluator.
    - Scenario-aware JSON output.
    - Label, severity, confidence, rationale, mapped facts.
    - No deterministic label leakage outside ensemble/adjudication mode.
 
-3. Implement audit tooling.
+2. Implement audit tooling.
    - `scripts/make_audit_sample.py`
    - `scripts/evaluate_audit_labels.py`
    - `data/audit/audit_sample.csv`
    - `paper/tables/audit_agreement.csv`
+
+3. Improve stress/control conditions.
+   - Add an adversarial utility prompt or stress configuration that reliably
+     elicits unsafe candidate actions.
+   - Ensure the shield has measurable trigger opportunities.
+   - Add prompt/opponent diagnostics for utility-prompt episodes with low client
+     utility.
 
 4. Expand dataset.
    - At least 40 handwritten seed scenarios.
@@ -103,14 +134,21 @@ Current results are benchmark-plumbing and calibration evidence only.
    - `paper/figures/best_of_n_scaling.png`.
 
 6. Make utility dynamics less saturated.
-   - Current runs often settle immediately with client utility 1.0.
+   - Current runs often settle immediately with client utility 1.0 or fail for
+     reasons unrelated to truthfulness pressure.
    - Add harder bargaining cases where truthful, deceptive, and controlled
      behavior create measurable utility differences.
 
 7. Update paper claims and tables.
    - Keep current scripted results as calibration.
-   - Add real model tables only after non-fake transcripts exist.
+   - Add real model tables only through `--require-real` exports.
    - Report audit uncertainty and evaluator disagreement.
+
+8. Expand judge calibration once audit labels exist.
+   - LLM judge precision/recall against audit.
+   - Disagreement table by trap category.
+   - Sensitivity table comparing deterministic-only, judge-only, and ensemble
+     labels.
 
 ## Definition Of Done For Next Paper Milestone
 

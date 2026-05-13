@@ -33,6 +33,22 @@ For real OpenAI-compatible runs, set `OPENAI_API_KEY` and optionally
 `SEGYM_LLM_MODEL`; run metadata records provider, model, temperature, and prompt
 path.
 
+When exporting real LLM results for paper tables, use the real-run guard so fake
+smoke artifacts cannot be mixed into the aggregate:
+
+```bash
+.venv/bin/python scripts/analyze_runs.py \
+  --run-dir runs/llm_zero_shot \
+  --run-dir runs/llm_utility_prompt \
+  --run-dir runs/llm_ethics_prompt \
+  --run-dir runs/llm_shield \
+  --run-dir runs/llm_best_of_n \
+  --latest-only \
+  --require-real \
+  --out paper/tables/llm_real_summary.csv \
+  --figures paper/figures/llm_real
+```
+
 ## Scope
 
 Version 0.1 focuses on civil settlement negotiation and truthfulness constraints inspired by ABA Model Rule 4.1. Labels are benchmark labels, not legal conclusions.

@@ -49,11 +49,15 @@ def to_simple_latex(summary) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", required=True)
+    parser.add_argument("--run-dir", action="append", required=True)
     parser.add_argument("--format", choices=["latex", "csv"], default="latex")
     parser.add_argument("--out", default="paper/tables")
+    parser.add_argument("--latest-only", action="store_true")
+    parser.add_argument("--require-real", action="store_true")
     args = parser.parse_args()
-    summary = aggregate_by_model(load_summary(args.run_dir))
+    summary = aggregate_by_model(
+        load_summary(args.run_dir, latest_only=args.latest_only, require_real=args.require_real)
+    )
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     if args.format == "csv":
