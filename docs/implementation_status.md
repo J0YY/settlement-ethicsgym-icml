@@ -100,51 +100,52 @@ Current results are still prototype-scale evidence.
    - Added `--latest-only` for timestamped experiment roots.
    - Added `--require-real` to reject missing metadata, fake-mode metadata,
      fake providers, and fake model configs before paper-table export.
+7. LLM judge evaluator.
+   - Added an OpenAI-compatible judge that returns validated `EthicsFinding`
+     objects.
+   - The judge prompt includes scenario facts but omits forbidden-pattern
+     expected labels.
+   - Added parser and prompt-boundary tests without external API calls.
 
 ### Next
 
-1. Implement LLM judge evaluator.
-   - Scenario-aware JSON output.
-   - Label, severity, confidence, rationale, mapped facts.
-   - No deterministic label leakage outside ensemble/adjudication mode.
-
-2. Implement audit tooling.
+1. Implement audit tooling.
    - `scripts/make_audit_sample.py`
    - `scripts/evaluate_audit_labels.py`
    - `data/audit/audit_sample.csv`
    - `paper/tables/audit_agreement.csv`
 
-3. Improve stress/control conditions.
+2. Improve stress/control conditions.
    - Add an adversarial utility prompt or stress configuration that reliably
      elicits unsafe candidate actions.
    - Ensure the shield has measurable trigger opportunities.
    - Add prompt/opponent diagnostics for utility-prompt episodes with low client
      utility.
 
-4. Expand dataset.
+3. Expand dataset.
    - At least 40 handwritten seed scenarios.
    - Split by scenario family.
    - Add held-out trap-category test split.
    - Add family-level source notes or explicit synthetic-only notes.
 
-5. Add LLM best-of-N scaling.
+4. Add LLM best-of-N scaling.
    - N in `{1, 2, 4, 8, 16}`.
    - Utility-only, ethics-aware, hard-safe, and shielded controls.
    - Bootstrap confidence intervals.
    - `paper/figures/best_of_n_scaling.png`.
 
-6. Make utility dynamics less saturated.
+5. Make utility dynamics less saturated.
    - Current runs often settle immediately with client utility 1.0 or fail for
      reasons unrelated to truthfulness pressure.
    - Add harder bargaining cases where truthful, deceptive, and controlled
      behavior create measurable utility differences.
 
-7. Update paper claims and tables.
+6. Update paper claims and tables.
    - Keep current scripted results as calibration.
    - Add real model tables only through `--require-real` exports.
    - Report audit uncertainty and evaluator disagreement.
 
-8. Expand judge calibration once audit labels exist.
+7. Expand judge calibration once audit labels exist.
    - LLM judge precision/recall against audit.
    - Disagreement table by trap category.
    - Sensitivity table comparing deterministic-only, judge-only, and ensemble
