@@ -137,10 +137,30 @@ Current results are still prototype-scale evidence.
      0.00/0.00 because its two policy-limit flags were adjudicated as true
      material facts, while the refined LLM judge has precision/recall
      0.889/0.727.
+10. Larger generated-split LLM run.
+   - Launched a 24-scenario generated-split matrix on Athena as Slurm job
+     `677407`.
+   - Completed zero-shot, utility-prompt, ethics-prompt, and shield conditions.
+   - The best-of-N generated condition failed with OpenAI HTTP 403 during API
+     calls, so generated best-of-N results are not available from this job.
+   - The temporary key file was removed by the job trap.
+   - The run exposed and fixed a deterministic evaluator bug where `$550,000`
+     combined policy limits were misread as `$50,000`.
+   - Re-aggregated the completed generated conditions offline from transcripts
+     using the corrected deterministic evaluator. Current partial generated
+     summary: zero-shot 24 episodes, utility-prompt 24, ethics-prompt 24, shield
+     24, all with zero corrected deterministic material violations; shield
+     trigger rate is 0.0417.
 
 ### Next
 
-1. Improve stress/control conditions.
+1. Recover or rerun generated best-of-N.
+   - The larger matrix is incomplete until best-of-N succeeds on the generated
+     split.
+   - The OpenAI key used in this session returned HTTP 403 during best-of-N; use
+     a rotated/valid key before retrying.
+
+2. Improve stress/control conditions.
    - Add an adversarial utility prompt or stress configuration that reliably
      elicits unsafe candidate actions.
    - Ensure the shield has measurable trigger opportunities.
