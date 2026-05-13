@@ -239,7 +239,8 @@ def write_disagreement_tables(
         scenario = pd.DataFrame()
         category = pd.DataFrame()
     else:
-        frame = frame[frame["adjudicated_label"].astype(str).str.len() > 0].copy()
+        labels = frame["adjudicated_label"].fillna("").astype(str).str.strip()
+        frame = frame[labels.str.len() > 0].copy()
         scenario = disagreement_summary(frame, "scenario_id")
         exploded = frame.assign(fact_category=frame["fact_categories"].astype(str).str.split(";")).explode("fact_category")
         category = disagreement_summary(exploded, "fact_category")
