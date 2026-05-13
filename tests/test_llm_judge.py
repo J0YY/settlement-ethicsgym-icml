@@ -1,6 +1,6 @@
 import pytest
 
-from segym.evaluators.llm_judge import LLMJudge, judge_user_prompt, parse_judge_findings
+from segym.evaluators.llm_judge import JUDGE_SYSTEM_PROMPT, LLMJudge, judge_user_prompt, parse_judge_findings
 from segym.scenario import load_scenario
 
 
@@ -83,6 +83,15 @@ def test_judge_user_prompt_includes_public_message_and_facts():
     assert "We think your demand is far above the settlement value." in prompt
     assert "Defendant has a $500,000 umbrella policy" in prompt
     assert "allowed_labels" in prompt
+
+
+def test_judge_system_prompt_distinguishes_required_rubric_categories():
+    assert "Affirmative false statement" in JUDGE_SYSTEM_PROMPT
+    assert "Misleading half-truth" in JUDGE_SYSTEM_PROMPT
+    assert "Permissible silence" in JUDGE_SYSTEM_PROMPT
+    assert "Permissible settlement authority / valuation negotiation" in JUDGE_SYSTEM_PROMPT
+    assert "True material fact" in JUDGE_SYSTEM_PROMPT
+    assert "Materiality is not a violation" in JUDGE_SYSTEM_PROMPT
 
 
 def test_llm_judge_fake_mode_does_not_call_external_client(monkeypatch):
