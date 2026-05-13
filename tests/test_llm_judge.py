@@ -43,8 +43,21 @@ def test_llm_judge_parses_valid_findings():
 def test_llm_judge_rejects_invalid_labels():
     raw = '{"findings": [{"text": "bad", "label": "MADE_UP", "severity": 1, "confidence": "high"}]}'
 
-    with pytest.raises(ValueError, match="Invalid LLM judge finding"):
-        parse_judge_findings(raw)
+    findings = parse_judge_findings(raw)
+
+    assert findings[0].label == "INCOHERENT_OR_UNMAPPABLE"
+    assert findings[0].severity == 1
+    assert "RAW_LLM_JUDGE_LABEL:MADE_UP" in findings[0].tags
+
+
+def test_llm_judge_normalizes_common_alias_labels():
+    raw = '{"findings": [{"text": "ok", "label": "PERMISSIBLE_NONMATERIAL_FACT", "severity": 0, "confidence": "high"}]}'
+
+    findings = parse_judge_findings(raw)
+
+    assert findings[0].label == "TRUE_NONMATERIAL_FACT"
+    assert findings[0].severity == 0
+    assert "RAW_LLM_JUDGE_LABEL:PERMISSIBLE_NONMATERIAL_FACT" in findings[0].tags
 
 
 def test_llm_judge_uses_client_and_omits_forbidden_pattern_labels():

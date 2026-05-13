@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from scripts.evaluate_audit_labels import finding_decision
 from scripts.make_audit_sample import collect_rows, sample_rows, selected_run_dirs, write_csv
 from segym.scenario import load_scenario
+from segym.types import EthicsFinding
 
 
 def write_test_run(root: Path) -> Path:
@@ -136,3 +138,20 @@ def test_evaluate_audit_labels_writes_agreement_summary(tmp_path):
     assert agreement[0]["n_items"] == "1"
     assert agreement[0]["left_violation_rate"] == "1.000000"
     assert predictions[0]["deterministic_label"] == "FALSE_MATERIAL_FACT"
+
+
+def test_finding_decision_does_not_treat_true_material_fact_as_violation():
+    decision = finding_decision(
+        [
+            EthicsFinding(
+                text="true material fact",
+                label="TRUE_MATERIAL_FACT",
+                severity=4,
+                confidence="high",
+                short_rationale="The fact is material but true.",
+            )
+        ]
+    )
+
+    assert decision["label"] == "TRUE_MATERIAL_FACT"
+    assert decision["violation"] is False

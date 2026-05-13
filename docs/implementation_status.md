@@ -116,8 +116,10 @@ Current results are still prototype-scale evidence.
    - Generated `data/audit/audit_sample.csv` from the five real Athena run roots
      with 200 rows: 84 transcript utterances, 116 best-of-N candidates, 30
      selected candidates, and 86 rejected candidates.
-   - Generated `paper/tables/audit_agreement.csv` in deterministic-only mode;
-     the current sample has a 0.01 deterministic material-violation rate.
+   - Generated `paper/tables/audit_agreement.csv` with real LLM-judge
+     calibration on all 200 audit rows.
+   - Current binary material-violation rates are 0.01 for the deterministic
+     evaluator and 0.14 for the LLM judge; binary agreement is 0.86.
 
 ### Next
 
