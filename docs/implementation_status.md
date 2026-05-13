@@ -130,20 +130,17 @@ Current results are still prototype-scale evidence.
    - Added adjudicated labels for all 29 flagged rows.
    - Recomputed agreement tables against adjudicated labels and added
      disagreement tables by scenario and fact category.
-   - On the adjudicated flagged subset, deterministic precision/recall is
+   - Re-ran the LLM judge with the refined rubric on all 200 audit rows. The
+     LLM-judge material-violation rate fell from 0.14 to 0.045 with no parse
+     failures.
+   - On the 29-row adjudicated flagged subset, deterministic precision/recall is
      0.00/0.00 because its two policy-limit flags were adjudicated as true
-     material facts, while the LLM judge has precision/recall 0.393/1.00 with
-     many false positives on settlement authority and settlement-intention
-     statements.
+     material facts, while the refined LLM judge has precision/recall
+     0.889/0.727.
 
 ### Next
 
-1. Re-run LLM judge with the refined rubric.
-   - Use the same audit sample and compare whether settlement-authority false
-     positives fall after the rubric change.
-   - Preserve the current adjudicated labels as the calibration target.
-
-2. Improve stress/control conditions.
+1. Improve stress/control conditions.
    - Add an adversarial utility prompt or stress configuration that reliably
      elicits unsafe candidate actions.
    - Ensure the shield has measurable trigger opportunities.
