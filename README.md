@@ -49,6 +49,28 @@ smoke artifacts cannot be mixed into the aggregate:
   --figures paper/figures/llm_real
 ```
 
+Generate an audit sample from the same guarded real run roots, then compute
+current evaluator summary/agreement tables:
+
+```bash
+.venv/bin/python scripts/make_audit_sample.py \
+  --run-dir runs/llm_zero_shot \
+  --run-dir runs/llm_utility_prompt \
+  --run-dir runs/llm_ethics_prompt \
+  --run-dir runs/llm_shield \
+  --run-dir runs/llm_best_of_n \
+  --latest-only \
+  --require-real \
+  --out data/audit/audit_sample.csv
+
+.venv/bin/python scripts/evaluate_audit_labels.py \
+  --audit-sample data/audit/audit_sample.csv \
+  --out paper/tables/audit_agreement.csv
+```
+
+To add LLM-judge decisions, set `OPENAI_API_KEY` in the environment and pass
+`--llm-judge`; the script will fail rather than silently running without a key.
+
 ## Scope
 
 Version 0.1 focuses on civil settlement negotiation and truthfulness constraints inspired by ABA Model Rule 4.1. Labels are benchmark labels, not legal conclusions.

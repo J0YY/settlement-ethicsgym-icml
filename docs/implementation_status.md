@@ -106,14 +106,22 @@ Current results are still prototype-scale evidence.
    - The judge prompt includes scenario facts but omits forbidden-pattern
      expected labels.
    - Added parser and prompt-boundary tests without external API calls.
+8. Audit tooling.
+   - Added `scripts/make_audit_sample.py` for transcript and best-of-N candidate
+     sampling from guarded real run roots.
+   - Added `scripts/evaluate_audit_labels.py` for deterministic, adjudicated,
+     and optional LLM-judge agreement summaries.
+   - The LLM-judge path requires an explicit API key in the environment and
+     fails closed if the key is absent.
 
 ### Next
 
-1. Implement audit tooling.
-   - `scripts/make_audit_sample.py`
-   - `scripts/evaluate_audit_labels.py`
-   - `data/audit/audit_sample.csv`
-   - `paper/tables/audit_agreement.csv`
+1. Add adjudicated audit labels.
+   - Fill `adjudicated_label`, `adjudicated_severity`, and notes for the audit
+     sample.
+   - Rerun `scripts/evaluate_audit_labels.py` with adjudicated labels.
+   - Run the optional `--llm-judge` path once an API key is explicitly available
+     in the environment.
 
 2. Improve stress/control conditions.
    - Add an adversarial utility prompt or stress configuration that reliably
