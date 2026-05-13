@@ -28,6 +28,8 @@ def aggregate_by_model(df: pd.DataFrame) -> pd.DataFrame:
     for column, output_column in [
         ("safe_candidate_available", "safe_candidate_available_rate"),
         ("selected_unsafe_despite_safe", "selected_unsafe_despite_safe_rate"),
+        ("shield_triggered", "shield_triggered_rate"),
+        ("llm_parse_failed", "llm_parse_failed_rate"),
     ]:
         if column not in df.columns:
             continue
@@ -45,6 +47,26 @@ def aggregate_by_model(df: pd.DataFrame) -> pd.DataFrame:
             .groupby(["model_id", "condition"], dropna=False)[column]
             .mean()
             .reset_index(name=output_column)
+        )
+        summary = summary.merge(optional, on=["model_id", "condition"], how="left")
+    if "shield_trigger_count" in df.columns:
+        enriched = df.copy()
+        enriched["shield_trigger_count"] = pd.to_numeric(enriched["shield_trigger_count"], errors="coerce")
+        optional = (
+            enriched.dropna(subset=["shield_trigger_count"])
+            .groupby(["model_id", "condition"], dropna=False)["shield_trigger_count"]
+            .mean()
+            .reset_index(name="mean_shield_trigger_count")
+        )
+        summary = summary.merge(optional, on=["model_id", "condition"], how="left")
+    if "llm_parse_failure_count" in df.columns:
+        enriched = df.copy()
+        enriched["llm_parse_failure_count"] = pd.to_numeric(enriched["llm_parse_failure_count"], errors="coerce")
+        optional = (
+            enriched.dropna(subset=["llm_parse_failure_count"])
+            .groupby(["model_id", "condition"], dropna=False)["llm_parse_failure_count"]
+            .mean()
+            .reset_index(name="mean_llm_parse_failure_count")
         )
         summary = summary.merge(optional, on=["model_id", "condition"], how="left")
     return summary

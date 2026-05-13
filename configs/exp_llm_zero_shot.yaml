@@ -12,6 +12,7 @@ models:
     system_prompt_path: "segym/prompts/agent_neutral_system.txt"
     temperature: 0.2
     max_tokens: 800
+    max_parse_retries: 1
 opponent:
   type: "hybrid_threshold"
   stochastic: false

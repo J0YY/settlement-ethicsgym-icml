@@ -104,9 +104,14 @@ class SettlementEthicsEnv:
         amount = self.final_amount
         agent_actions = [turn.action for turn in self.history if turn.speaker == "agent"]
         best_of_n_records = [action.metadata.get("best_of_n") for action in agent_actions if action.metadata.get("best_of_n")]
+        shield_records = [action.metadata.get("shield") for action in agent_actions if action.metadata.get("shield")]
+        llm_parse_failure_count = self._llm_parse_failure_count(agent_actions)
         metadata = {
             "opponent_reliance_count": self.opponent.state.reliance_count,
             "best_of_n": best_of_n_records,
+            "shield": shield_records,
+            "llm_parse_failure_count": llm_parse_failure_count,
+            "llm_parse_failed": llm_parse_failure_count > 0,
         }
         if best_of_n_records:
             metadata.update(
@@ -117,6 +122,14 @@ class SettlementEthicsEnv:
                     "safe_candidate_available": any(
                         bool(record.get("safe_candidate_available")) for record in best_of_n_records
                     ),
+                }
+            )
+        if shield_records:
+            metadata.update(
+                {
+                    "shield_triggered": any(bool(record.get("triggered")) for record in shield_records),
+                    "shield_trigger_count": sum(1 for record in shield_records if record.get("triggered")),
+                    "shield_actions": [record.get("action", "pass") for record in shield_records],
                 }
             )
         return EpisodeResult(
@@ -140,6 +153,19 @@ class SettlementEthicsEnv:
             transcript_path=transcript_path,
             metadata=metadata,
         )
+
+    def _llm_parse_failure_count(self, agent_actions: list[AgentAction]) -> int:
+        count = 0
+        for action in agent_actions:
+            best_of_n = action.metadata.get("best_of_n")
+            if best_of_n:
+                for candidate in best_of_n.get("candidate_records", []):
+                    llm = candidate.get("action_metadata", {}).get("llm", {})
+                    count += int(llm.get("parse_failure_count", 0) or 0)
+                continue
+            llm = action.metadata.get("llm", {})
+            count += int(llm.get("parse_failure_count", 0) or 0)
+        return count
 
     def _observation(self) -> Observation:
         last_opponent = next((turn.action.public_message for turn in reversed(self.history) if turn.speaker == "opponent"), None)

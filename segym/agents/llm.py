@@ -98,6 +98,32 @@ class LLMResponseError(RuntimeError):
     pass
 
 
+def llm_metadata(
+    *,
+    provider: str,
+    model_name: str,
+    temperature: float | None = None,
+    system_prompt_path: str | None = None,
+    candidate_index: int | None = None,
+    parse_failures: list[dict[str, str]] | None = None,
+    parse_failed: bool = False,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "provider": provider,
+        "model": model_name,
+        "candidate_index": candidate_index,
+        "parse_failed": parse_failed,
+        "parse_failure_count": len(parse_failures or []),
+    }
+    if temperature is not None:
+        metadata["temperature"] = temperature
+    if system_prompt_path is not None:
+        metadata["system_prompt_path"] = system_prompt_path
+    if parse_failures:
+        metadata["parse_failures"] = parse_failures
+    return metadata
+
+
 @dataclass
 class OpenAICompatibleClient:
     model: str
@@ -152,6 +178,7 @@ class LLMNegotiator(BaseAgent):
     api_key_env: str = "OPENAI_API_KEY"
     base_url: str = "https://api.openai.com/v1/chat/completions"
     fake: bool = False
+    max_parse_retries: int = 1
 
     def act(self, obs: Observation) -> AgentAction:
         return self.act_once(obs)
@@ -159,7 +186,7 @@ class LLMNegotiator(BaseAgent):
     def act_once(self, obs: Observation, candidate_index: int | None = None) -> AgentAction:
         if self.fake or os.environ.get("SEGYN_FAKE_MODEL") == "1" or self.provider == "fake":
             action = FakeLLMAgent(model_id=self.model_id).act(obs)
-            action.metadata["llm"] = {"provider": "fake", "model": self.model_name, "candidate_index": candidate_index}
+            action.metadata["llm"] = llm_metadata(provider="fake", model_name=self.model_name, candidate_index=candidate_index)
             return action
 
         system_prompt = load_prompt(self.system_prompt_path)
@@ -171,19 +198,60 @@ class LLMNegotiator(BaseAgent):
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
-        raw_text = client.complete(system_prompt, user_prompt)
-        try:
-            payload = normalize_action_payload(extract_json_object(raw_text))
-            action = AgentAction.model_validate(payload)
-        except (json.JSONDecodeError, ValidationError, ValueError) as exc:
-            raise LLMResponseError(f"Could not parse LLM action JSON: {raw_text}") from exc
-        action.metadata["llm"] = {
-            "provider": self.provider,
-            "model": self.model_name,
-            "temperature": self.temperature,
-            "system_prompt_path": self.system_prompt_path,
-            "candidate_index": candidate_index,
-        }
+        parse_failures: list[dict[str, str]] = []
+        attempts = max(int(self.max_parse_retries), 0) + 1
+        for attempt in range(attempts):
+            raw_text = client.complete(system_prompt, self._prompt_for_attempt(user_prompt, attempt, parse_failures))
+            try:
+                payload = normalize_action_payload(extract_json_object(raw_text))
+                action = AgentAction.model_validate(payload)
+            except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+                parse_failures.append(
+                    {
+                        "attempt": str(attempt + 1),
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "raw_text": raw_text,
+                    }
+                )
+                continue
+            action.metadata["llm"] = llm_metadata(
+                provider=self.provider,
+                model_name=self.model_name,
+                temperature=self.temperature,
+                system_prompt_path=self.system_prompt_path,
+                candidate_index=candidate_index,
+                parse_failures=parse_failures,
+                parse_failed=False,
+            )
+            return action
+        return self._parse_failure_fallback(candidate_index, parse_failures)
+
+    def _prompt_for_attempt(self, user_prompt: str, attempt: int, parse_failures: list[dict[str, str]]) -> str:
+        if attempt == 0:
+            return user_prompt
+        last_error = parse_failures[-1]["error"] if parse_failures else "invalid JSON"
+        return (
+            user_prompt
+            + "\n\nThe previous response could not be parsed as the required action JSON. "
+            + f"Parser error: {last_error}. Return only one valid JSON object matching the schema."
+        )
+
+    def _parse_failure_fallback(self, candidate_index: int | None, parse_failures: list[dict[str, str]]) -> AgentAction:
+        action = AgentAction(
+            public_message="I need to clarify our position before making a settlement proposal.",
+            risk_flags_self_report=["llm_parse_failure"],
+            ethics_check="No public factual representation sent because the model output could not be parsed.",
+        )
+        action.metadata["llm"] = llm_metadata(
+            provider=self.provider,
+            model_name=self.model_name,
+            temperature=self.temperature,
+            system_prompt_path=self.system_prompt_path,
+            candidate_index=candidate_index,
+            parse_failures=parse_failures,
+            parse_failed=True,
+        )
         return action
 
 

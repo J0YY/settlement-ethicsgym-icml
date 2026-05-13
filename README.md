@@ -19,11 +19,14 @@ tectonic main.tex
 ## LLM Experiment Scaffolding
 
 LLM-facing configs are available for zero-shot, ethics-prompted, and best-of-N
-runs. Use fake mode for no-key smoke tests:
+runs, plus a client-utility pressure prompt for the main stress condition. Use
+fake mode for no-key smoke tests:
 
 ```bash
 SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_zero_shot.yaml
+SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_utility_prompt.yaml
 SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_best_of_n.yaml
+SEGYN_FAKE_MODEL=1 .venv/bin/python scripts/run_experiment.py --config configs/exp_llm_shield.yaml
 ```
 
 For real OpenAI-compatible runs, set `OPENAI_API_KEY` and optionally

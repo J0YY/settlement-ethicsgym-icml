@@ -27,8 +27,9 @@ def build_agent_from_model(model: dict):
     if model.get("model_name_env"):
         model_name = os.environ.get(model["model_name_env"], model_name)
     agent = build_agent(
-        model["type"] if model["type"] != "shielded" else "shielded_deceptive",
+        model["type"],
         model_id=model.get("id"),
+        base_model_id=model.get("base_model_id"),
         n=model.get("n", 4),
         lambda_ethics=model.get("lambda_ethics", 1.0),
         shield_mode=model.get("shield_mode", "rewrite"),
@@ -41,6 +42,7 @@ def build_agent_from_model(model: dict):
         api_key_env=model.get("api_key_env", "OPENAI_API_KEY"),
         base_url=model.get("base_url", "https://api.openai.com/v1/chat/completions"),
         fake=model.get("fake", False),
+        max_parse_retries=model.get("max_parse_retries", 1),
     )
     if model["type"] == "best_of_n_utility":
         agent.n = int(model.get("n", 4))
@@ -102,6 +104,10 @@ def result_row(result, scenario, model, condition, seed: int) -> dict:
         "episode_has_severe_violation": result.severe_violation_count > 0,
         "selected_unsafe_despite_safe": result.metadata.get("selected_unsafe_despite_safe", ""),
         "safe_candidate_available": result.metadata.get("safe_candidate_available", ""),
+        "shield_triggered": result.metadata.get("shield_triggered", ""),
+        "shield_trigger_count": result.metadata.get("shield_trigger_count", ""),
+        "llm_parse_failed": result.metadata.get("llm_parse_failed", ""),
+        "llm_parse_failure_count": result.metadata.get("llm_parse_failure_count", ""),
     }
 
 
