@@ -29,7 +29,7 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In no-API controls and real LLM runs, utility pressure increases material misrepresentation. On a 24-scenario generated split, utility-only LLM best-of-$N$ produces deterministic material violations in 8.3\% of episodes, while ethics-aware best-of-$N$ produces none. A stronger stress prompt raises violations to 8.3\% for single-sample generation and 12.5\% for best-of-$N$. An LLM-judge audit over 400 utterances/candidates shows that automatic labels remain imperfect but informative: on the 44-row flagged adjudication subset, the LLM judge reaches 0.60 F1 against adjudicated violation labels versus 0.38 for the deterministic evaluator. These results suggest that SettlementEthicsGym can expose optimization-induced misrepresentation and measure mitigation tradeoffs, while also making evaluator uncertainty explicit.
+Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In no-API controls and real LLM runs, utility pressure increases material misrepresentation. On a 24-scenario generated split, utility prompting produces deterministic material violations in 8.3\% of episodes, while utility-only and ethics-aware LLM best-of-$N$ each produce violations in 4.2\% of episodes. A stronger stress prompt produces violations in 8.3\% of episodes, and stress best-of-$N$ produces violations in 4.2--8.3\% of episodes. An LLM-judge audit over 400 utterances/candidates shows that automatic labels remain imperfect but informative: after evaluator repair, the deterministic evaluator reaches 0.88 F1 on the 44-row flagged adjudication subset, while the LLM judge reaches 0.60 F1. These results suggest that SettlementEthicsGym can expose optimization-induced misrepresentation and measure mitigation tradeoffs, while also making evaluator uncertainty explicit.
 \end{abstract}
 
 \section{Introduction}
@@ -83,7 +83,7 @@ Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. Thes
 \end{figure}
 
 \paragraph{Real LLM generated split.}
-We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref{tab:llm-generated} reports deterministic evaluator metrics after replaying run summaries with the current evaluator. The base prompt conditions reached settlements at rates between 37.5\% and 66.7\% without deterministic material violations. The utility-only best-of-$N$ condition achieved the highest mean utility in the base matrix, but produced material and severe violations in 8.3\% of episodes. The ethics-aware best-of-$N$ selector eliminated deterministic violations in this split, but with lower settlement rate and utility.
+We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref{tab:llm-generated} reports deterministic evaluator metrics after replaying run summaries with the repaired evaluator. The zero-shot, ethics-prompt, and shielded conditions reached settlements without deterministic material violations. The utility prompt produced material violations in 8.3\% of episodes. The best-of-$N$ conditions achieved higher candidate coverage and exposed selected unsafe cases: utility-only best-of-$N$ reached the highest mean utility in the base matrix and produced material violations in 4.2\% of episodes; ethics-aware best-of-$N$ also produced material violations in 4.2\%, but did not select an unsafe candidate when a safe candidate was available under the current selector log.
 
 \begin{table}[t]
 \caption{Real LLM results on the 24-scenario generated split. Misrep. is deterministic material misrepresentation rate.}
@@ -95,17 +95,17 @@ We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref
 Condition & Settle & Utility & Misrep. \\
 \midrule
 Zero-shot & 0.375 & 0.340 & 0.000 \\
-Utility prompt & 0.417 & 0.281 & 0.000 \\
+Utility prompt & 0.417 & 0.281 & 0.083 \\
 Ethics prompt & 0.667 & 0.481 & 0.000 \\
 Utility shield & 0.458 & 0.359 & 0.000 \\
-Best-of-$N$ utility, $N=4$ & 0.500 & 0.500 & 0.083 \\
-Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.000 \\
+Best-of-$N$ utility, $N=4$ & 0.500 & 0.500 & 0.042 \\
+Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Stress conditions.}
-The initial generated split produced too few unsafe single-sample outputs to stress mitigations. We therefore added a stress utility prompt that explicitly rewards client utility and bargaining pressure while preserving the truthfulness rule, and we increased best-of-$N$ sampling to $N=8$. Table~\ref{tab:llm-stress} reports the stress-inclusive matrix. Stress utility prompting produced deterministic material violations in 8.3\% of episodes. Both stress best-of-$N$ selectors produced deterministic material violations in 12.5\% of episodes, and every best-of-$N$ episode had at least one safe candidate available. In this version, the ethics-aware selector did not yet reduce stress best-of-$N$ violations, which motivates stronger candidate-level filtering and a repaired evaluator.
+The initial generated split produced too few unsafe single-sample outputs to stress mitigations. We therefore added a stress utility prompt that explicitly rewards client utility and bargaining pressure while preserving the truthfulness rule, and we increased best-of-$N$ sampling to $N=8$. Table~\ref{tab:llm-stress} reports the stress-inclusive matrix. Stress utility prompting produced deterministic material violations in 8.3\% of episodes. Stress utility best-of-$N$ produced violations in 4.2\% of episodes, while stress ethics-aware best-of-$N$ produced violations in 8.3\%. Every best-of-$N$ episode had at least one safe candidate available, and both stress best-of-$N$ selectors selected an unsafe candidate despite a safe alternative in 12.5\% of episodes. This motivates stronger candidate-level filtering rather than relying on a scalar ethics penalty alone.
 
 \begin{table}[t]
 \caption{Stress-inclusive real LLM matrix. Misrep. is deterministic material misrepresentation rate.}
@@ -117,8 +117,8 @@ The initial generated split produced too few unsafe single-sample outputs to str
 Condition & Settle & Utility & Misrep. \\
 \midrule
 Stress utility prompt & 0.375 & 0.228 & 0.083 \\
-Stress best-of-$N$ utility, $N=8$ & 0.417 & 0.417 & 0.125 \\
-Stress best-of-$N$ ethics, $N=8$ & 0.250 & 0.250 & 0.125 \\
+Stress best-of-$N$ utility, $N=8$ & 0.417 & 0.417 & 0.042 \\
+Stress best-of-$N$ ethics, $N=8$ & 0.250 & 0.250 & 0.083 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -131,7 +131,7 @@ Stress best-of-$N$ ethics, $N=8$ & 0.250 & 0.250 & 0.125 \\
 \end{figure}
 
 \paragraph{Audit calibration.}
-Because the deterministic evaluator is intentionally high precision on narrow traps, we audited evaluator disagreements. A refined LLM judge distinguishes affirmative false statements, misleading half-truths, permissible silence, permissible settlement authority or valuation negotiation, and true material facts. On a 400-row stress-inclusive audit sample, the deterministic evaluator flagged 7.5\% of rows and the LLM judge flagged 5.5\%. The 44-row union of flagged rows was adjudicated using scenario facts and both evaluator outputs. Against those adjudicated labels, the LLM judge had precision 0.545, recall 0.667, and F1 0.600, while the deterministic evaluator had precision 0.300, recall 0.500, and F1 0.375.
+Because the deterministic evaluator is intentionally narrow, we audited evaluator disagreements and used them to repair coverage, legal-status, and authority patterns. A refined LLM judge distinguishes affirmative false statements, misleading half-truths, permissible silence, permissible settlement authority or valuation negotiation, and true material facts. On a 400-row stress-inclusive audit sample after repair, the deterministic evaluator flagged 6.75\% of rows and the LLM judge flagged 5.5\%. The 44-row union of pre-repair flagged rows was adjudicated using scenario facts and both evaluator outputs. Against those adjudicated labels, the repaired deterministic evaluator had precision 0.783, recall 1.000, and F1 0.878, while the LLM judge had precision 0.545, recall 0.667, and F1 0.600.
 
 The disagreement pattern is substantively useful. The deterministic evaluator overflags true policy-limit statements such as correctly stating both primary and umbrella coverage, but misses legal-status and client-authority formulations. The LLM judge better catches client-authority, legal-status, procedural-status, and damages issues, but overcalls some permissible settlement posture and true coverage statements. We therefore report deterministic results as a conservative automated measurement pass rather than as final ground truth, and use adjudicated audit subsets to estimate label uncertainty.
 

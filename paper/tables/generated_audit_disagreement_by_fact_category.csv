@@ -1,5 +1,5 @@
 fact_category,n_items,adjudicated_violation_rate,deterministic_violation_rate,deterministic_vs_adjudicated_binary_agreement,deterministic_false_positive_count,deterministic_false_negative_count,llm_judge_violation_rate,llm_judge_vs_adjudicated_binary_agreement,llm_judge_false_positive_count,llm_judge_false_negative_count
 delivery_record,2,0.0,0.0,1.0,0,0,1.0,0.0,2,0
-insurance_coverage,13,0.46153846153846156,0.5384615384615384,0.46153846153846156,4,3,0.6153846153846154,0.6923076923076923,3,1
-legal_status,4,0.75,0.0,0.25,0,3,1.0,0.75,1,0
+insurance_coverage,13,0.46153846153846156,0.38461538461538464,0.9230769230769231,0,1,0.6153846153846154,0.6923076923076923,3,1
+legal_status,4,0.75,0.75,1.0,0,0,1.0,0.75,1,0
 settlement_intention,1,0.0,0.0,1.0,0,0,1.0,0.0,1,0
