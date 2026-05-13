@@ -117,6 +117,8 @@ def test_evaluate_audit_labels_writes_agreement_summary(tmp_path):
     sample_path = tmp_path / "audit_sample.csv"
     agreement_path = tmp_path / "audit_agreement.csv"
     predictions_path = tmp_path / "audit_predictions.csv"
+    scenario_path = tmp_path / "by_scenario.csv"
+    category_path = tmp_path / "by_category.csv"
     write_csv(sample_path, rows)
 
     subprocess.run(
@@ -129,6 +131,10 @@ def test_evaluate_audit_labels_writes_agreement_summary(tmp_path):
             str(agreement_path),
             "--predictions-out",
             str(predictions_path),
+            "--scenario-disagreement-out",
+            str(scenario_path),
+            "--fact-category-disagreement-out",
+            str(category_path),
         ],
         check=True,
     )
