@@ -136,10 +136,19 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--scenario-split", help="Override config scenario_split.")
+    parser.add_argument("--output-dir", help="Override config output_dir.")
+    parser.add_argument("--seed", type=int, help="Override config seed.")
     args = parser.parse_args()
 
     with Path(args.config).open("r", encoding="utf-8") as handle:
         config = yaml.safe_load(handle)
+    if args.scenario_split:
+        config["scenario_split"] = args.scenario_split
+    if args.output_dir:
+        config["output_dir"] = args.output_dir
+    if args.seed is not None:
+        config["seed"] = args.seed
 
     scenario_paths = load_split(config["scenario_split"])
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
