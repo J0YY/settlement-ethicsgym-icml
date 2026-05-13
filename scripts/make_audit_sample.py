@@ -14,6 +14,8 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from segym.analysis.metrics import discover_summary_paths, validate_non_fake_run
+from segym.evaluators.deterministic import DeterministicEthicsEvaluator
+from segym.types import Scenario
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -46,7 +48,14 @@ def selected_run_dirs(run_dirs: list[str], *, latest_only: bool, require_real: b
     return selected
 
 
-def finding_summary(findings: list[dict[str, Any]]) -> dict[str, Any]:
+EVALUATOR = DeterministicEthicsEvaluator()
+
+
+def finding_summary(message: str, scenario: Scenario) -> dict[str, Any]:
+    findings = [
+        finding.model_dump(mode="json")
+        for finding in EVALUATOR.evaluate(message, scenario)
+    ]
     max_severity = max((int(finding.get("severity", 0) or 0) for finding in findings), default=0)
     labels = sorted({str(finding.get("label", "")) for finding in findings if finding.get("label")})
     return {
@@ -79,7 +88,8 @@ def base_row(run_dir: Path, episode_dir: Path, result: dict[str, Any], scenario:
 
 def transcript_rows(run_dir: Path, episode_dir: Path) -> list[dict[str, Any]]:
     result = load_json(episode_dir / "result.json")
-    scenario = load_json(episode_dir / "scenario.json")
+    scenario_json = load_json(episode_dir / "scenario.json")
+    scenario = Scenario.model_validate(scenario_json)
     rows = []
     for turn in read_jsonl(episode_dir / "transcript.jsonl"):
         if turn.get("speaker") != "agent":
@@ -87,8 +97,9 @@ def transcript_rows(run_dir: Path, episode_dir: Path) -> list[dict[str, Any]]:
         action = turn.get("action", {})
         llm = action.get("metadata", {}).get("llm", {})
         offer = action.get("offer", {})
+        message = action.get("public_message", "")
         row = {
-            **base_row(run_dir, episode_dir, result, scenario),
+            **base_row(run_dir, episode_dir, result, scenario_json),
             "source_type": "transcript",
             "turn_index": turn.get("turn_index", ""),
             "speaker": turn.get("speaker", ""),
@@ -96,12 +107,12 @@ def transcript_rows(run_dir: Path, episode_dir: Path) -> list[dict[str, Any]]:
             "selected": "",
             "selector": "",
             "n_candidates": "",
-            "public_message": action.get("public_message", ""),
+            "public_message": message,
             "offer_amount_usd": offer.get("amount_usd", ""),
             "provider": llm.get("provider", ""),
             "model_name": llm.get("model", ""),
             "system_prompt_path": llm.get("system_prompt_path", ""),
-            **finding_summary(turn.get("ethics_findings", [])),
+            **finding_summary(message, scenario),
         }
         row["audit_id"] = audit_id(row)
         rows.append(row)
@@ -113,13 +124,15 @@ def candidate_rows(run_dir: Path, episode_dir: Path) -> list[dict[str, Any]]:
     if not candidates_path.exists():
         return []
     result = load_json(episode_dir / "result.json")
-    scenario = load_json(episode_dir / "scenario.json")
+    scenario_json = load_json(episode_dir / "scenario.json")
+    scenario = Scenario.model_validate(scenario_json)
     rows = []
     for candidate in read_jsonl(candidates_path):
         llm = candidate.get("action_metadata", {}).get("llm", {})
         offer = candidate.get("offer", {})
+        message = candidate.get("public_message", "")
         row = {
-            **base_row(run_dir, episode_dir, result, scenario),
+            **base_row(run_dir, episode_dir, result, scenario_json),
             "source_type": "candidate",
             "turn_index": candidate.get("turn_index", ""),
             "speaker": "agent",
@@ -127,12 +140,12 @@ def candidate_rows(run_dir: Path, episode_dir: Path) -> list[dict[str, Any]]:
             "selected": candidate.get("selected", ""),
             "selector": candidate.get("selector", ""),
             "n_candidates": candidate.get("n_candidates", ""),
-            "public_message": candidate.get("public_message", ""),
+            "public_message": message,
             "offer_amount_usd": offer.get("amount_usd", ""),
             "provider": llm.get("provider", ""),
             "model_name": llm.get("model", ""),
             "system_prompt_path": llm.get("system_prompt_path", ""),
-            **finding_summary(candidate.get("ethics_findings", [])),
+            **finding_summary(message, scenario),
         }
         row["audit_id"] = audit_id(row)
         rows.append(row)
