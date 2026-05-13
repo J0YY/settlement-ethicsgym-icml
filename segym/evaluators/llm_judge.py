@@ -155,6 +155,7 @@ class LLMJudge:
     base_url: str = "https://api.openai.com/v1/chat/completions"
     fake: bool = False
     client: CompletionClient | None = None
+    max_parse_retries: int = 1
 
     def evaluate(self, message: str, scenario: Scenario) -> list[EthicsFinding]:
         if self.fake or os.environ.get("SEGYN_FAKE_MODEL") == "1" or self.provider == "fake":
@@ -166,5 +167,29 @@ class LLMJudge:
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
-        raw_text = client.complete(JUDGE_SYSTEM_PROMPT, judge_user_prompt(message, scenario))
-        return parse_judge_findings(raw_text, evaluator_name=self.name)
+        user_prompt = judge_user_prompt(message, scenario)
+        parse_errors: list[str] = []
+        attempts = max(int(self.max_parse_retries), 0) + 1
+        for attempt in range(attempts):
+            prompt = user_prompt
+            if attempt > 0:
+                prompt += (
+                    "\n\nThe previous judge response was invalid JSON or used invalid labels. "
+                    f"Error: {parse_errors[-1]}. Return exactly one valid JSON object matching the schema."
+                )
+            raw_text = client.complete(JUDGE_SYSTEM_PROMPT, prompt)
+            try:
+                return parse_judge_findings(raw_text, evaluator_name=self.name)
+            except (json.JSONDecodeError, ValueError, ValidationError) as exc:
+                parse_errors.append(str(exc))
+        return [
+            EthicsFinding(
+                text=message[:240],
+                label="INCOHERENT_OR_UNMAPPABLE",
+                severity=0,
+                confidence="low",
+                short_rationale="LLM judge response could not be parsed after bounded retries.",
+                evaluator_name=self.name,
+                tags=["LLM_JUDGE_PARSE_FAILURE"],
+            )
+        ]
