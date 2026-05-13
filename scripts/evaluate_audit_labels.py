@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from segym.evaluators.deterministic import DeterministicEthicsEvaluator
 from segym.evaluators.llm_judge import LLMJudge
 from segym.scenario import load_scenario_id
-from segym.types import EthicsFinding
+from segym.types import EthicsFinding, Scenario
 
 
 NO_VIOLATION = "NO_VIOLATION"
@@ -55,6 +55,14 @@ def parse_existing_findings(raw: str) -> list[EthicsFinding]:
     return [EthicsFinding.model_validate(item) for item in parsed]
 
 
+def load_existing_predictions(path: str | Path) -> dict[str, dict[str, Any]]:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    frame = pd.read_csv(p).fillna("")
+    return {str(row["audit_id"]): row.to_dict() for _, row in frame.iterrows()}
+
+
 def adjudicated_decision(row: pd.Series) -> dict[str, Any] | None:
     label = str(row.get("adjudicated_label", "") or "").strip()
     severity_raw = row.get("adjudicated_severity", "")
@@ -65,6 +73,27 @@ def adjudicated_decision(row: pd.Series) -> dict[str, Any] | None:
     except ValueError:
         severity = 0 if label == NO_VIOLATION else 3
     return {"label": label, "severity": severity, "violation": severity >= 3}
+
+
+def fact_categories_for_findings(findings: list[EthicsFinding], scenario: Scenario) -> list[str]:
+    categories = []
+    fact_by_id = scenario.fact_by_id
+    for finding in findings:
+        for fact_id in finding.mapped_fact_ids:
+            fact = fact_by_id.get(fact_id)
+            categories.append(fact.category if fact else "unknown_fact")
+        if not finding.mapped_fact_ids and finding.label in MATERIAL_VIOLATION_LABELS:
+            categories.append("unmapped_violation")
+    return sorted(set(categories)) or ["none"]
+
+
+def merge_fact_categories(*category_lists: list[str]) -> str:
+    categories = set()
+    for category_list in category_lists:
+        categories.update(category for category in category_list if category)
+    if len(categories) > 1:
+        categories.discard("none")
+    return ";".join(sorted(categories or {"none"}))
 
 
 def cohen_kappa(a_values: list[Any], b_values: list[Any]) -> float | None:
@@ -154,11 +183,82 @@ def write_predictions(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() == "true"
+
+
+def rate(values: list[bool]) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def disagreement_summary(frame: pd.DataFrame, group_column: str) -> pd.DataFrame:
+    rows = []
+    if frame.empty:
+        return pd.DataFrame()
+    for group, group_frame in frame.groupby(group_column, dropna=False):
+        det = [bool_value(value) for value in group_frame["deterministic_violation"]]
+        adj = [bool_value(value) for value in group_frame["adjudicated_violation"]]
+        row = {
+            group_column: group,
+            "n_items": len(group_frame),
+            "adjudicated_violation_rate": rate(adj),
+            "deterministic_violation_rate": rate(det),
+            "deterministic_vs_adjudicated_binary_agreement": rate([a == b for a, b in zip(det, adj, strict=True)]),
+            "deterministic_false_positive_count": sum(1 for predicted, gold in zip(det, adj, strict=True) if predicted and not gold),
+            "deterministic_false_negative_count": sum(1 for predicted, gold in zip(det, adj, strict=True) if not predicted and gold),
+        }
+        if "llm_judge_violation" in group_frame.columns:
+            judge = [bool_value(value) for value in group_frame["llm_judge_violation"]]
+            row.update(
+                {
+                    "llm_judge_violation_rate": rate(judge),
+                    "llm_judge_vs_adjudicated_binary_agreement": rate(
+                        [a == b for a, b in zip(judge, adj, strict=True)]
+                    ),
+                    "llm_judge_false_positive_count": sum(
+                        1 for predicted, gold in zip(judge, adj, strict=True) if predicted and not gold
+                    ),
+                    "llm_judge_false_negative_count": sum(
+                        1 for predicted, gold in zip(judge, adj, strict=True) if not predicted and gold
+                    ),
+                }
+            )
+        rows.append(row)
+    return pd.DataFrame(rows).sort_values(group_column)
+
+
+def write_disagreement_tables(
+    prediction_rows: list[dict[str, Any]],
+    scenario_out: Path,
+    fact_category_out: Path,
+) -> None:
+    frame = pd.DataFrame(prediction_rows)
+    if frame.empty or "adjudicated_violation" not in frame.columns:
+        scenario = pd.DataFrame()
+        category = pd.DataFrame()
+    else:
+        frame = frame[frame["adjudicated_label"].astype(str).str.len() > 0].copy()
+        scenario = disagreement_summary(frame, "scenario_id")
+        exploded = frame.assign(fact_category=frame["fact_categories"].astype(str).str.split(";")).explode("fact_category")
+        category = disagreement_summary(exploded, "fact_category")
+    scenario_out.parent.mkdir(parents=True, exist_ok=True)
+    fact_category_out.parent.mkdir(parents=True, exist_ok=True)
+    scenario.to_csv(scenario_out, index=False)
+    category.to_csv(fact_category_out, index=False)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audit-sample", default="data/audit/audit_sample.csv")
     parser.add_argument("--out", default="paper/tables/audit_agreement.csv")
     parser.add_argument("--predictions-out", default="data/audit/audit_predictions.csv")
+    parser.add_argument("--scenario-disagreement-out", default="paper/tables/audit_disagreement_by_scenario.csv")
+    parser.add_argument(
+        "--fact-category-disagreement-out",
+        default="paper/tables/audit_disagreement_by_fact_category.csv",
+    )
     parser.add_argument("--llm-judge", action="store_true")
     parser.add_argument("--judge-model", default=os.environ.get("SEGYM_JUDGE_MODEL", "gpt-4.1-mini"))
     parser.add_argument("--judge-api-key-env", default="OPENAI_API_KEY")
@@ -166,6 +266,7 @@ def main() -> int:
     args = parser.parse_args()
 
     sample = pd.read_csv(args.audit_sample).fillna("")
+    existing_predictions = load_existing_predictions(args.predictions_out)
     deterministic = DeterministicEthicsEvaluator()
     judge = None
     if args.llm_judge:
@@ -193,9 +294,11 @@ def main() -> int:
             "deterministic_severity": det_decision["severity"],
             "deterministic_violation": det_decision["violation"],
             "deterministic_findings_json": det_decision["findings_json"],
+            "fact_categories": merge_fact_categories(fact_categories_for_findings(det_findings, scenario)),
         }
         if judge:
-            judge_decision = finding_decision(judge.evaluate(message, scenario))
+            judge_findings = judge.evaluate(message, scenario)
+            judge_decision = finding_decision(judge_findings)
             llm_decisions.append(judge_decision)
             output.update(
                 {
@@ -205,11 +308,18 @@ def main() -> int:
                     "llm_judge_findings_json": judge_decision["findings_json"],
                 }
             )
+            output["fact_categories"] = merge_fact_categories(
+                output["fact_categories"].split(";"),
+                fact_categories_for_findings(judge_findings, scenario),
+            )
             if args.progress_every > 0 and (row_index + 1) % args.progress_every == 0:
                 print(f"Judged {row_index + 1}/{total} audit rows", file=sys.stderr)
         else:
+            existing_row = existing_predictions.get(str(row["audit_id"]), {})
             try:
-                existing = parse_existing_findings(str(row.get("llm_judge_findings_json", "")))
+                existing = parse_existing_findings(
+                    str(row.get("llm_judge_findings_json", "") or existing_row.get("llm_judge_findings_json", ""))
+                )
             except (json.JSONDecodeError, ValueError):
                 existing = []
             if existing:
@@ -222,6 +332,10 @@ def main() -> int:
                         "llm_judge_violation": judge_decision["violation"],
                         "llm_judge_findings_json": judge_decision["findings_json"],
                     }
+                )
+                output["fact_categories"] = merge_fact_categories(
+                    output["fact_categories"].split(";"),
+                    fact_categories_for_findings(existing, scenario),
                 )
         adjudicated = adjudicated_decision(row)
         adjudicated_mask.append(adjudicated is not None)
@@ -267,6 +381,11 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
     write_predictions(Path(args.predictions_out), prediction_rows)
+    write_disagreement_tables(
+        prediction_rows,
+        Path(args.scenario_disagreement_out),
+        Path(args.fact_category_disagreement_out),
+    )
     print(f"Wrote {len(rows)} agreement rows to {out}")
     return 0
 

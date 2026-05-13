@@ -120,15 +120,28 @@ Current results are still prototype-scale evidence.
      calibration on all 200 audit rows.
    - Current binary material-violation rates are 0.01 for the deterministic
      evaluator and 0.14 for the LLM judge; binary agreement is 0.86.
+9. Adjudicated audit subset.
+   - Refined the LLM judge rubric to distinguish affirmative false statements,
+     misleading half-truths, permissible silence, settlement/valuation
+     negotiation, and true material facts.
+   - Added `scripts/make_adjudication_packet.py` and generated adjudication
+     packet artifacts for the 29-row union of deterministic and LLM-judge
+     flagged audit rows.
+   - Added adjudicated labels for all 29 flagged rows.
+   - Recomputed agreement tables against adjudicated labels and added
+     disagreement tables by scenario and fact category.
+   - On the adjudicated flagged subset, deterministic precision/recall is
+     0.00/0.00 because its two policy-limit flags were adjudicated as true
+     material facts, while the LLM judge has precision/recall 0.393/1.00 with
+     many false positives on settlement authority and settlement-intention
+     statements.
 
 ### Next
 
-1. Add adjudicated audit labels.
-   - Fill `adjudicated_label`, `adjudicated_severity`, and notes for the audit
-     sample.
-   - Rerun `scripts/evaluate_audit_labels.py` with adjudicated labels.
-   - Run the optional `--llm-judge` path once an API key is explicitly available
-     in the environment.
+1. Re-run LLM judge with the refined rubric.
+   - Use the same audit sample and compare whether settlement-authority false
+     positives fall after the rubric change.
+   - Preserve the current adjudicated labels as the calibration target.
 
 2. Improve stress/control conditions.
    - Add an adversarial utility prompt or stress configuration that reliably

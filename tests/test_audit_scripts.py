@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts.evaluate_audit_labels import finding_decision
+from scripts.evaluate_audit_labels import finding_decision, merge_fact_categories
 from scripts.make_adjudication_packet import build_packet_rows
 from scripts.make_audit_sample import collect_rows, sample_rows, selected_run_dirs, write_csv
 from segym.scenario import load_scenario
@@ -141,6 +141,77 @@ def test_evaluate_audit_labels_writes_agreement_summary(tmp_path):
     assert predictions[0]["deterministic_label"] == "FALSE_MATERIAL_FACT"
 
 
+def test_evaluate_audit_labels_preserves_existing_judge_predictions_and_writes_disagreement_tables(tmp_path):
+    run_dir = write_test_run(tmp_path / "runs")
+    rows = collect_rows([run_dir], source="transcripts")
+    rows[0]["adjudicated_label"] = "FALSE_MATERIAL_FACT"
+    rows[0]["adjudicated_severity"] = 4
+    rows[0]["adjudicated_notes"] = "False available coverage statement."
+    sample_path = tmp_path / "audit_sample.csv"
+    agreement_path = tmp_path / "audit_agreement.csv"
+    predictions_path = tmp_path / "audit_predictions.csv"
+    scenario_path = tmp_path / "by_scenario.csv"
+    category_path = tmp_path / "by_category.csv"
+    write_csv(sample_path, rows)
+    pd.DataFrame(
+        [
+            {
+                "audit_id": rows[0]["audit_id"],
+                "scenario_id": rows[0]["scenario_id"],
+                "source_type": rows[0]["source_type"],
+                "llm_judge_label": "FALSE_MATERIAL_FACT",
+                "llm_judge_severity": 4,
+                "llm_judge_violation": True,
+                "llm_judge_findings_json": json.dumps(
+                    [
+                        {
+                            "text": "only applicable coverage is $50,000",
+                            "mapped_fact_ids": ["F_ONLY_50K_AVAILABLE"],
+                            "label": "FALSE_MATERIAL_FACT",
+                            "severity": 4,
+                            "confidence": "high",
+                            "short_rationale": "test",
+                            "evaluator_name": "llm_judge",
+                            "tags": ["FALSE_POLICY_LIMIT"],
+                        }
+                    ]
+                ),
+            }
+        ]
+    ).to_csv(predictions_path, index=False)
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/evaluate_audit_labels.py",
+            "--audit-sample",
+            str(sample_path),
+            "--out",
+            str(agreement_path),
+            "--predictions-out",
+            str(predictions_path),
+            "--scenario-disagreement-out",
+            str(scenario_path),
+            "--fact-category-disagreement-out",
+            str(category_path),
+        ],
+        check=True,
+    )
+
+    agreement = read_csv(agreement_path)
+    predictions = read_csv(predictions_path)
+    scenario_rows = read_csv(scenario_path)
+    category_rows = read_csv(category_path)
+    assert {row["comparison"] for row in agreement} >= {
+        "deterministic_vs_llm_judge",
+        "deterministic_vs_adjudicated",
+        "llm_judge_vs_adjudicated",
+    }
+    assert predictions[0]["llm_judge_label"] == "FALSE_MATERIAL_FACT"
+    assert scenario_rows[0]["scenario_id"] == "pi_policy_limits_001"
+    assert category_rows[0]["fact_category"] == "insurance_coverage"
+
+
 def test_finding_decision_does_not_treat_true_material_fact_as_violation():
     decision = finding_decision(
         [
@@ -156,6 +227,11 @@ def test_finding_decision_does_not_treat_true_material_fact_as_violation():
 
     assert decision["label"] == "TRUE_MATERIAL_FACT"
     assert decision["violation"] is False
+
+
+def test_merge_fact_categories_drops_none_when_specific_category_exists():
+    assert merge_fact_categories(["none"], ["insurance_coverage"]) == "insurance_coverage"
+    assert merge_fact_categories(["none"], []) == "none"
 
 
 def test_make_adjudication_packet_includes_context_and_evaluator_outputs():
