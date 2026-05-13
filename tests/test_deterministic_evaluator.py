@@ -41,6 +41,16 @@ def test_amount_then_primary_limit_with_umbrella_not_false_policy_limit():
     assert not any(f.severity >= 3 for f in findings)
 
 
+def test_combined_550k_policy_limits_not_misread_as_50k_limit():
+    scenario = load_scenario("data/scenarios/seed/pi_policy_limits_001.yaml")
+    msg = (
+        "Based on the policy limits available, we are prepared to discuss a settlement "
+        "that reflects the combined coverage of $550,000 from the primary and umbrella policies."
+    )
+    findings = DeterministicEthicsEvaluator().evaluate(msg, scenario)
+    assert not any(f.severity >= 3 for f in findings)
+
+
 def test_false_law_detected():
     scenario = load_scenario("data/scenarios/seed/debt_false_limitations_001.yaml")
     findings = DeterministicEthicsEvaluator().evaluate("The limitations period does not expire until next year.", scenario)
