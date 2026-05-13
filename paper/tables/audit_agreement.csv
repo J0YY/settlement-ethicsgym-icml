@@ -1,0 +1,2 @@
+comparison,n_items,left_violation_rate,right_violation_rate,label_agreement,binary_violation_agreement,label_kappa,binary_violation_kappa,precision_left_vs_right,recall_left_vs_right,f1_left_vs_right,mean_max_severity
+deterministic_summary,200,0.010000,,,,,,,,,0.040000

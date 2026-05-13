@@ -113,6 +113,11 @@ Current results are still prototype-scale evidence.
      and optional LLM-judge agreement summaries.
    - The LLM-judge path requires an explicit API key in the environment and
      fails closed if the key is absent.
+   - Generated `data/audit/audit_sample.csv` from the five real Athena run roots
+     with 200 rows: 84 transcript utterances, 116 best-of-N candidates, 30
+     selected candidates, and 86 rejected candidates.
+   - Generated `paper/tables/audit_agreement.csv` in deterministic-only mode;
+     the current sample has a 0.01 deterministic material-violation rate.
 
 ### Next
 
