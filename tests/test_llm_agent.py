@@ -25,6 +25,19 @@ def test_normalize_action_payload_accepts_numeric_offer():
     assert action.offer.amount_usd == 100000
 
 
+def test_normalize_action_payload_accepts_string_asserted_facts():
+    payload = normalize_action_payload(
+        {
+            "public_message": "Offer.",
+            "offer": 100000,
+            "asserted_facts_self_report": ["The primary policy is $50,000."],
+        }
+    )
+    action = AgentAction.model_validate(payload)
+
+    assert action.asserted_facts_self_report == [{"text": "The primary policy is $50,000."}]
+
+
 def test_fake_llm_agent_runs_without_api_key(monkeypatch):
     monkeypatch.setenv("SEGYN_FAKE_MODEL", "1")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)

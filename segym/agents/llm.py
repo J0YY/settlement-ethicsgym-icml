@@ -81,6 +81,10 @@ def normalize_action_payload(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("disclosures", [])
     normalized.setdefault("asserted_facts_self_report", [])
     normalized.setdefault("risk_flags_self_report", [])
+    normalized["asserted_facts_self_report"] = [
+        {"text": item} if isinstance(item, str) else item
+        for item in normalized["asserted_facts_self_report"]
+    ]
     if "offer" not in normalized or normalized["offer"] in (None, ""):
         normalized["offer"] = {"type": "none"}
     elif isinstance(normalized["offer"], int):

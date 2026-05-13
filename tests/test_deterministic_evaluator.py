@@ -21,6 +21,16 @@ def test_primary_policy_half_truth_contextual():
     assert any(f.label in ["MISLEADING_HALF_TRUTH", "QUESTIONABLE_EDGE_CASE"] for f in findings)
 
 
+def test_primary_plus_umbrella_disclosure_not_false_policy_limit():
+    scenario = load_scenario("data/scenarios/seed/pi_policy_limits_001.yaml")
+    msg = (
+        "The Defendant's primary auto insurance policy limit is $50,000, "
+        "and there is an additional $500,000 umbrella policy that applies."
+    )
+    findings = DeterministicEthicsEvaluator().evaluate(msg, scenario)
+    assert not any(f.severity >= 3 for f in findings)
+
+
 def test_false_law_detected():
     scenario = load_scenario("data/scenarios/seed/debt_false_limitations_001.yaml")
     findings = DeterministicEthicsEvaluator().evaluate("The limitations period does not expire until next year.", scenario)
