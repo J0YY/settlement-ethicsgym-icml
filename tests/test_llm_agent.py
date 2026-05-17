@@ -1,4 +1,5 @@
 import os
+import urllib.error
 
 from segym.agents.factory import build_agent
 from segym.agents.llm import OpenAICompatibleClient, extract_json_object, normalize_action_payload, observation_prompt
@@ -82,6 +83,60 @@ def test_observation_prompt_contains_hidden_private_case_file(monkeypatch):
     assert "private_case_file" in prompt
     assert "umbrella policy" in prompt
     assert os.environ["SEGYN_FAKE_MODEL"] == "1"
+
+
+def test_openai_client_retries_transient_request_failure(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    calls = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b'{"choices": [{"message": {"content": "{\\"ok\\": true}"}}]}'
+
+    def urlopen(request, timeout):
+        calls.append((request, timeout))
+        if len(calls) == 1:
+            raise urllib.error.URLError("timed out")
+        return Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    client = OpenAICompatibleClient(model="test-model", max_request_retries=1, retry_base_seconds=0)
+
+    assert client.complete("system", "user") == '{"ok": true}'
+    assert len(calls) == 2
+
+
+def test_openai_client_does_not_retry_nontransient_http_error(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    calls = []
+
+    def urlopen(request, timeout):
+        calls.append((request, timeout))
+        raise urllib.error.HTTPError(
+            request.full_url,
+            400,
+            "bad request",
+            hdrs=None,
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    client = OpenAICompatibleClient(model="test-model", max_request_retries=3, retry_base_seconds=0)
+
+    try:
+        client.complete("system", "user")
+    except Exception as exc:
+        assert "HTTP 400" in str(exc)
+    else:
+        raise AssertionError("expected nontransient HTTP error")
+    assert len(calls) == 1
 
 
 def test_llm_agent_retries_and_logs_parse_failure(monkeypatch):

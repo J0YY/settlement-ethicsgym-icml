@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -136,6 +137,14 @@ class OpenAICompatibleClient:
     temperature: float = 0.2
     max_tokens: int = 800
     timeout_seconds: int = 60
+    max_request_retries: int = 4
+    retry_base_seconds: float = 2.0
+
+    def _retry_delay(self, attempt: int) -> float:
+        return min(30.0, self.retry_base_seconds * (2**attempt))
+
+    def _should_retry_http(self, status_code: int) -> bool:
+        return status_code in {408, 409, 425, 429, 500, 502, 503, 504}
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         api_key = os.environ.get(self.api_key_env)
@@ -160,15 +169,24 @@ class OpenAICompatibleClient:
             },
             method="POST",
         )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                data = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise LLMResponseError(f"LLM provider HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise LLMResponseError(f"LLM provider request failed: {exc}") from exc
-        return data["choices"][0]["message"]["content"]
+        attempts = max(int(self.max_request_retries), 0) + 1
+        last_error: Exception | None = None
+        for attempt in range(attempts):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"]
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                if not self._should_retry_http(exc.code) or attempt == attempts - 1:
+                    raise LLMResponseError(f"LLM provider HTTP {exc.code}: {detail}") from exc
+                last_error = exc
+            except urllib.error.URLError as exc:
+                if attempt == attempts - 1:
+                    raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {exc}") from exc
+                last_error = exc
+            time.sleep(self._retry_delay(attempt))
+        raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {last_error}")
 
 
 @dataclass
