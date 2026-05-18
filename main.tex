@@ -29,14 +29,14 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In no-API controls and real LLM runs, utility pressure increases material misrepresentation. On a 24-scenario generated split, utility prompting produces deterministic material violations in 8.3\% of episodes, while utility-only and ethics-aware LLM best-of-$N$ each produce violations in 4.2\% of episodes. A stronger stress prompt produces violations in 8.3\% of episodes, and stress best-of-$N$ produces violations in 4.2--8.3\% of episodes. An LLM-judge audit over 400 utterances/candidates shows that automatic labels remain imperfect but informative: after evaluator repair, the deterministic evaluator reaches 0.88 F1 on the 44-row flagged adjudication subset, while the LLM judge reaches 0.60 F1. These results suggest that SettlementEthicsGym can expose optimization-induced misrepresentation and measure mitigation tradeoffs, while also making evaluator uncertainty explicit.
+Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic material misrepresentation in 6.25--14.6\% of episodes depending on selector and sample budget. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes while preserving more utility than blocking, but this zero is detector-aligned: the Wilson 95\% upper bound remains 7.4\%, and independent auditing is required before treating it as evidence of eliminated misconduct. Cross-model replication with a smaller OpenAI model preserves the shield pattern while showing model-specific utility and parse-failure differences. These results suggest that SettlementEthicsGym can expose optimization-induced misrepresentation and evaluate mitigation tradeoffs, while making evaluator uncertainty explicit.
 \end{abstract}
 
 \section{Introduction}
 
-Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
+Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results, a domain-specific instance of reward hacking and overoptimization concerns studied in AI safety \citep{amodei2016concrete,gao2022scaling}. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements \citep{settlebench,negotiationarena}. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
 
-The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses synthetic disputes and a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing. The current implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, real LLM agents, best-of-$N$ inference-time optimization, shielded generation, and audit tooling for adjudicating evaluator disagreements.
+The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses synthetic disputes and a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing under professional-responsibility rules such as truthfulness to others, client authority over settlement, and confidentiality \citep{aba41,aba12,aba16,aba439}. The current implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, real LLM agents, best-of-$N$ inference-time optimization, shielded generation, and audit tooling for adjudicating evaluator disagreements.
 
 \section{Benchmark Design}
 
@@ -104,11 +104,11 @@ Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 \\
 \end{tabular}
 \end{table}
 
-\paragraph{Stress conditions.}
-The initial generated split produced too few unsafe single-sample outputs to stress mitigations. We therefore added a stress utility prompt that explicitly rewards client utility and bargaining pressure while preserving the truthfulness rule, and we increased best-of-$N$ sampling to $N=8$. Table~\ref{tab:llm-stress} reports the stress-inclusive matrix. Stress utility prompting produced deterministic material violations in 8.3\% of episodes. Stress utility best-of-$N$ produced violations in 4.2\% of episodes, while stress ethics-aware best-of-$N$ produced violations in 8.3\%. Every best-of-$N$ episode had at least one safe candidate available, and both stress best-of-$N$ selectors selected an unsafe candidate despite a safe alternative in 12.5\% of episodes. This motivates stronger candidate-level filtering rather than relying on a scalar ethics penalty alone.
+\paragraph{48-scenario stress matrix.}
+The initial generated split produced too few unsafe single-sample outputs to stress mitigations. We therefore expanded to a 48-scenario stress split, added a stress utility prompt that explicitly rewards client utility and bargaining pressure while preserving the truthfulness rule, and increased best-of-$N$ sampling to $N=8$. Table~\ref{tab:llm-stress} reports the main 48-scenario matrix. Stress utility prompting produced deterministic material violations in 4.2\% of episodes. Stress utility best-of-$N$ produced violations in 14.6\%, while stress ethics-aware best-of-$N$ produced violations in 6.25\%. Every best-of-$N$ episode had at least one safe candidate available, but utility-only selection still selected an unsafe candidate despite a safe alternative in 14.6\% of episodes. This motivates candidate-level filtering rather than relying on a scalar ethics penalty alone.
 
 \begin{table}[t]
-\caption{Stress-inclusive real LLM matrix. Misrep. is deterministic material misrepresentation rate.}
+\caption{48-scenario stress real LLM matrix. Misrep. is deterministic material misrepresentation rate.}
 \label{tab:llm-stress}
 \centering
 \small
@@ -116,9 +116,13 @@ The initial generated split produced too few unsafe single-sample outputs to str
 \toprule
 Condition & Settle & Utility & Misrep. \\
 \midrule
-Stress utility prompt & 0.375 & 0.228 & 0.083 \\
-Stress best-of-$N$ utility, $N=8$ & 0.417 & 0.417 & 0.042 \\
-Stress best-of-$N$ ethics, $N=8$ & 0.250 & 0.250 & 0.083 \\
+Zero-shot & 0.396 & 0.328 & 0.042 \\
+Utility prompt & 0.500 & 0.364 & 0.042 \\
+Ethics prompt & 0.604 & 0.503 & 0.000 \\
+Stress utility prompt & 0.396 & 0.328 & 0.042 \\
+Stress best-of-$N$ utility, $N=8$ & 0.354 & 0.354 & 0.146 \\
+Stress best-of-$N$ ethics, $N=8$ & 0.312 & 0.312 & 0.062 \\
+Stress rewrite shield & 0.396 & 0.326 & 0.000 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -130,6 +134,34 @@ Stress best-of-$N$ ethics, $N=8$ & 0.250 & 0.250 & 0.083 \\
 \label{fig:llm-stress-violations}
 \end{figure}
 
+\paragraph{Scaling and mitigation.}
+Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablation runs. Increasing sample budget from $N=8$ to $N=16$ did not improve safety: utility-only $N=16$ produced 12.5\% material violations, and ethics-aware $N=16$ produced 14.6\%. In a lambda sweep for ethics-aware $N=8$, $\lambda=0.25$ produced the lowest deterministic material violation rate among tested values, while $\lambda=0.5$ and $\lambda=2.0$ were worse. The rewrite shield reached 0/48 deterministic material violations in both the main stress matrix and the shield ablation, whereas warn-only left 8.3\% material violations and block preserved safety at substantially lower utility.
+
+\begin{table}[t]
+\caption{Selected 48-scenario scaling and shield results. Misrep. is deterministic material misrepresentation rate. CI is the Wilson 95\% interval for Misrep.}
+\label{tab:scaling-shield}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Condition & Utility & Misrep. & CI \\
+\midrule
+BoN utility $N=8$ & 0.438 & 0.125 & [0.055, 0.250] \\
+BoN utility $N=16$ & 0.312 & 0.125 & [0.055, 0.250] \\
+BoN ethics $N=8$ & 0.396 & 0.062 & [0.021, 0.168] \\
+BoN ethics $N=16$ & 0.333 & 0.146 & [0.072, 0.272] \\
+Shield warn-only & 0.188 & 0.083 & [0.033, 0.196] \\
+Shield block & 0.208 & 0.000 & [0.000, 0.074] \\
+Shield rewrite & 0.340 & 0.000 & [0.000, 0.074] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The zero shield rows should be interpreted narrowly. They are zero deterministic-evaluator violations, not proven zero misconduct. The rewrite shield uses deterministic findings to decide whether to rewrite, so this result is partly detector-aligned. We therefore report Wilson intervals and separately audit shield outputs with an LLM judge and adjudication packets.
+
+\paragraph{Cross-model replication.}
+We replicated the core stress matrix with GPT-4.1-nano. The smaller model had higher settlement rates and utility in this benchmark, but the qualitative shield pattern remained: zero-shot produced 10.4\% deterministic material violations, stress utility prompting 6.25\%, utility-only best-of-$N$ 4.2\%, ethics-aware best-of-$N$ 6.25\%, and rewrite shielding 0/48. The ethics-aware best-of-$N$ nano condition had a 6.25\% parse-failure rate, so cross-model comparisons should account for model-specific structured-output reliability.
+
 \paragraph{Audit calibration.}
 Because the deterministic evaluator is intentionally narrow, we audited evaluator disagreements and used them to repair coverage, legal-status, and authority patterns. A refined LLM judge distinguishes affirmative false statements, misleading half-truths, permissible silence, permissible settlement authority or valuation negotiation, and true material facts. On a 400-row stress-inclusive audit sample after repair, the deterministic evaluator flagged 6.75\% of rows and the LLM judge flagged 5.5\%. The 44-row union of pre-repair flagged rows was adjudicated using scenario facts and both evaluator outputs. Against those adjudicated labels, the repaired deterministic evaluator had precision 0.783, recall 1.000, and F1 0.878, while the LLM judge had precision 0.545, recall 0.667, and F1 0.600.
 
@@ -137,22 +169,32 @@ The disagreement pattern is substantively useful. The deterministic evaluator ov
 
 \section{Next Experiments}
 
-The immediate next step is evaluator repair and replay: policy-limit logic should avoid flagging true total-coverage statements while still flagging false umbrella inapplicability, expired-limitations assertions should be detected as legal-status violations, and false objective client-authority caps should be separated from permissible willingness or valuation statements. After replay, the highest-signal run sequence is: an expanded 48-scenario stress split, a best-of-$N$ scaling curve over $N \in \{1,2,4,8,16\}$, mitigation ablations comparing prompts, shields, prefilters, and ethics penalties, cross-model replication, and an adjudication sample that includes matched unflagged negatives as well as evaluator-flagged rows.
+The immediate next step is detector-independent validation. We construct a stratified audit packet spanning shield rewrite, shield warn-only, base stress prompting, utility best-of-$N$, and ethics-aware best-of-$N$ rows, with scenario facts and both evaluator outputs visible. We also add blindspot stress scenarios for lien status, withdrawn expert support, settlement funding source, and approval authority, because these are plausible factual claims where phrase-based deterministic detectors are less likely to catch paraphrases.
 
 \section{Limitations}
 
-The current scenarios are synthetic and intentionally narrow. The deterministic evaluator is useful for replayable measurement but insufficient for broad language variation, and the current audit shows both false positives and false negatives. The benchmark taxonomy is inspired by professional-responsibility rules, especially truthfulness in negotiation, but it is not a jurisdiction-specific legal standard. Stronger paper claims require larger scenario coverage, repaired automatic labels, cross-model replication, and human or legally trained annotation beyond the current adjudicated disagreement subsets.
+The current scenarios are synthetic and intentionally narrow. The deterministic evaluator is useful for replayable measurement but insufficient for broad language variation, and the current audit shows both false positives and false negatives. Shield results are especially vulnerable to detector overfitting because the shield and headline deterministic metric share evaluator logic. The benchmark taxonomy is inspired by professional-responsibility rules, especially truthfulness in negotiation, but it is not a jurisdiction-specific legal standard. Stronger paper claims require larger scenario coverage, repaired automatic labels, cross-model replication, independent LLM-judge review, and human or legally trained annotation beyond the current adjudicated disagreement subsets.
 
 \section{Conclusion}
 
 SettlementEthicsGym operationalizes a narrow but important safety question for legal agents: whether optimization for settlement outcomes amplifies material misrepresentation. The implementation establishes an executable environment, deterministic and LLM-judge evaluators, real LLM agents, control conditions, stress conditions, candidate-level audit logs, and a paper pipeline. Initial real LLM results support the benchmark's core premise: stronger utility pressure can surface unsafe negotiation statements, and evaluating mitigations requires both automated replay and adjudicated audit.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{12}
 
 \bibitem[American Bar Association(2026a)]{aba41}
 American Bar Association.
 Model Rule 4.1: Truthfulness in Statements to Others.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_4_1_truthfulness_in_statements_to_others/}.
+
+\bibitem[American Bar Association(2026b)]{aba12}
+American Bar Association.
+Model Rule 1.2: Scope of Representation and Allocation of Authority Between Client and Lawyer.
+\url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_2_scope_of_representation_allocation_of_authority_between_client_lawyer/}.
+
+\bibitem[American Bar Association(2026c)]{aba16}
+American Bar Association.
+Model Rule 1.6: Confidentiality of Information.
+\url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_6_confidentiality_of_information/}.
 
 \bibitem[American Bar Association(2006)]{aba439}
 American Bar Association.
@@ -169,6 +211,26 @@ Bianchi et al.
 NegotiationArena: How Well Can LLMs Negotiate?
 Proceedings of Machine Learning Research, 2024.
 \url{https://proceedings.mlr.press/v235/bianchi24a.html}.
+
+\bibitem[Amodei et al.(2016)]{amodei2016concrete}
+Amodei, D., Olah, C., Steinhardt, J., Christiano, P., Schulman, J., and Mane, D.
+Concrete Problems in AI Safety.
+arXiv:1606.06565, 2016.
+
+\bibitem[Gao et al.(2022)]{gao2022scaling}
+Gao, L., Schulman, J., and Hilton, J.
+Scaling Laws for Reward Model Overoptimization.
+arXiv:2210.10760, 2022.
+
+\bibitem[Guha et al.(2023)]{legalbench}
+Guha, N. et al.
+LegalBench: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models.
+NeurIPS Datasets and Benchmarks, 2023.
+
+\bibitem[Zheng et al.(2023)]{llmjudge}
+Zheng, L. et al.
+Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.
+NeurIPS Datasets and Benchmarks, 2023.
 
 \end{thebibliography}
 
