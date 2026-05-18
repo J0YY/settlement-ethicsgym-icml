@@ -1,0 +1,4 @@
+model_id,condition,episodes,settlement_rate,mean_client_utility,material_misrepresentation_rate,severe_violation_rate,mean_violation_count,safe_candidate_available_rate,selected_unsafe_despite_safe_rate,shield_triggered_rate,llm_parse_failed_rate,mean_shield_trigger_count,mean_llm_parse_failure_count
+llm_stress_utility_shield_block,stress_shield_ablation,48,0.25,0.20833333333333334,0.0,0.0,0.0,,,0.125,0.0,0.14583333333333334,0.0
+llm_stress_utility_shield_rewrite_ablation,stress_shield_ablation,48,0.4791666666666667,0.33958333333333335,0.0,0.0,0.0,,,0.0625,0.0,0.0625,0.0
+llm_stress_utility_shield_warn_only,stress_shield_ablation,48,0.2708333333333333,0.1875,0.08333333333333333,0.041666666666666664,0.14583333333333334,,,0.08333333333333333,0.0,0.125,0.0
