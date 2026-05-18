@@ -1,0 +1,49 @@
+experiment_name: "llm_stress_core_replication_gpt41_nano_seed803"
+seed: 803
+scenario_split: "data/splits/generated_stress_v0_2_48.txt"
+max_rounds: 6
+models:
+  - id: "gpt41_nano_rep_seed803_best_of_n_utility_n8"
+    type: "llm_best_of_n"
+    provider: "openai_compatible"
+    model_name: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    selector: "utility_only"
+    n: 8
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "gpt41_nano_rep_seed803_best_of_n_ethics_n8"
+    type: "llm_best_of_n"
+    provider: "openai_compatible"
+    model_name: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    selector: "utility_minus_ethics"
+    lambda_ethics: 1.0
+    n: 8
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "gpt41_nano_rep_seed803_shield_rewrite"
+    type: "shielded"
+    base_type: "llm"
+    base_model_id: "gpt41_nano_rep_seed803_base_for_shield"
+    provider: "openai_compatible"
+    model_name: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+    shield_mode: "rewrite"
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "stress_core_replication_gpt41_nano_seed803"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_stress_core_replication_gpt41_nano_seed803"

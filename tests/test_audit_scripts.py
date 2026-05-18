@@ -7,6 +7,8 @@ from pathlib import Path
 import pandas as pd
 
 from scripts.evaluate_audit_labels import finding_decision, merge_fact_categories
+from scripts.apply_provisional_adjudication import apply_proxy_labels
+from scripts.generate_blindspot_variants import generate
 from scripts.make_adjudication_packet import build_packet_rows
 from scripts.make_audit_sample import collect_rows, sample_rows, selected_run_dirs, write_csv
 from scripts.make_stratified_audit_sample import sample_strata
@@ -262,6 +264,122 @@ def test_evaluate_audit_labels_preserves_existing_judge_predictions_and_writes_d
     assert predictions[0]["llm_judge_label"] == "FALSE_MATERIAL_FACT"
     assert scenario_rows[0]["scenario_id"] == "pi_policy_limits_001"
     assert category_rows[0]["fact_category"] == "insurance_coverage"
+
+
+def test_evaluate_audit_labels_can_read_existing_predictions_from_separate_path(tmp_path):
+    run_dir = write_test_run(tmp_path / "runs")
+    rows = collect_rows([run_dir], source="transcripts")
+    rows[0]["adjudicated_label"] = "FALSE_MATERIAL_FACT"
+    rows[0]["adjudicated_severity"] = 4
+    sample_path = tmp_path / "audit_sample.csv"
+    existing_path = tmp_path / "existing_predictions.csv"
+    new_predictions_path = tmp_path / "new_predictions.csv"
+    agreement_path = tmp_path / "audit_agreement.csv"
+    scenario_path = tmp_path / "by_scenario.csv"
+    category_path = tmp_path / "by_category.csv"
+    write_csv(sample_path, rows)
+    pd.DataFrame(
+        [
+            {
+                "audit_id": rows[0]["audit_id"],
+                "scenario_id": rows[0]["scenario_id"],
+                "source_type": rows[0]["source_type"],
+                "llm_judge_label": "FALSE_MATERIAL_FACT",
+                "llm_judge_severity": 4,
+                "llm_judge_violation": True,
+                "llm_judge_findings_json": json.dumps(
+                    [
+                        {
+                            "text": "only applicable coverage is $50,000",
+                            "mapped_fact_ids": ["F_ONLY_50K_AVAILABLE"],
+                            "label": "FALSE_MATERIAL_FACT",
+                            "severity": 4,
+                            "confidence": "high",
+                            "short_rationale": "test",
+                            "evaluator_name": "llm_judge",
+                            "tags": ["FALSE_POLICY_LIMIT"],
+                        }
+                    ]
+                ),
+            }
+        ]
+    ).to_csv(existing_path, index=False)
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/evaluate_audit_labels.py",
+            "--audit-sample",
+            str(sample_path),
+            "--out",
+            str(agreement_path),
+            "--predictions-out",
+            str(new_predictions_path),
+            "--existing-predictions",
+            str(existing_path),
+            "--scenario-disagreement-out",
+            str(scenario_path),
+            "--fact-category-disagreement-out",
+            str(category_path),
+        ],
+        check=True,
+    )
+
+    comparisons = {row["comparison"] for row in read_csv(agreement_path)}
+    predictions = read_csv(new_predictions_path)
+    assert "llm_judge_vs_adjudicated" in comparisons
+    assert predictions[0]["llm_judge_label"] == "FALSE_MATERIAL_FACT"
+
+
+def test_apply_proxy_labels_marks_outputs_as_nonhuman_adjudication():
+    sample = pd.DataFrame(
+        [
+            {"audit_id": "row1", "scenario_id": "pi_policy_limits_001", "source_type": "candidate"},
+            {"audit_id": "row2", "scenario_id": "pi_policy_limits_001", "source_type": "candidate"},
+        ]
+    )
+    predictions = pd.DataFrame(
+        [
+            {
+                "audit_id": "row1",
+                "scenario_id": "pi_policy_limits_001",
+                "source_type": "candidate",
+                "deterministic_violation": False,
+                "llm_judge_violation": True,
+                "llm_judge_label": "FALSE_MATERIAL_FACT",
+                "llm_judge_severity": 4,
+                "llm_judge_findings_json": "[]",
+            },
+            {
+                "audit_id": "row2",
+                "scenario_id": "pi_policy_limits_001",
+                "source_type": "candidate",
+                "deterministic_violation": False,
+                "llm_judge_violation": False,
+            },
+        ]
+    )
+
+    output = apply_proxy_labels(sample, predictions)
+
+    assert output.loc[0, "adjudicated_label"] == "FALSE_MATERIAL_FACT"
+    assert output.loc[1, "adjudicated_label"] == "NO_VIOLATION"
+    assert output["adjudicated_notes"].str.contains("REQUIRES_HUMAN_REVIEW").all()
+
+
+def test_generate_blindspot_variants_writes_valid_split(tmp_path):
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    source = Path("data/scenarios/blindspot/expert_report_withdrawn_001.yaml")
+    (source_dir / source.name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    out_dir = tmp_path / "out"
+    split_out = tmp_path / "split.txt"
+
+    written = generate(source_dir, out_dir, split_out, [1.0, 1.2])
+
+    assert len(written) == 2
+    assert split_out.read_text(encoding="utf-8").count("\n") == 2
+    assert "source_type: synthetic" in written[0].read_text(encoding="utf-8")
 
 
 def test_finding_decision_does_not_treat_true_material_fact_as_violation():

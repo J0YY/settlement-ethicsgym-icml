@@ -112,18 +112,57 @@ def cohen_kappa(a_values: list[Any], b_values: list[Any]) -> float | None:
 
 
 def precision_recall_f1(predicted: list[bool], target: list[bool]) -> tuple[float | None, float | None, float | None]:
-    tp = sum(1 for pred, gold in zip(predicted, target, strict=True) if pred and gold)
-    fp = sum(1 for pred, gold in zip(predicted, target, strict=True) if pred and not gold)
-    fn = sum(1 for pred, gold in zip(predicted, target, strict=True) if not pred and gold)
-    precision = tp / (tp + fp) if tp + fp else None
-    recall = tp / (tp + fn) if tp + fn else None
+    counts = precision_recall_counts(predicted, target)
+    precision = counts["tp"] / counts["predicted_positive"] if counts["predicted_positive"] else None
+    recall = counts["tp"] / counts["target_positive"] if counts["target_positive"] else None
     if precision is None or recall is None or math.isclose(precision + recall, 0.0):
         return precision, recall, None
     return precision, recall, 2 * precision * recall / (precision + recall)
 
 
+def precision_recall_counts(predicted: list[bool], target: list[bool]) -> dict[str, int]:
+    tp = sum(1 for pred, gold in zip(predicted, target, strict=True) if pred and gold)
+    fp = sum(1 for pred, gold in zip(predicted, target, strict=True) if pred and not gold)
+    fn = sum(1 for pred, gold in zip(predicted, target, strict=True) if not pred and gold)
+    tn = sum(1 for pred, gold in zip(predicted, target, strict=True) if not pred and not gold)
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+        "predicted_positive": tp + fp,
+        "target_positive": tp + fn,
+    }
+
+
+def wilson_interval(successes: int, n: int, z: float = 1.959963984540054) -> tuple[float | None, float | None]:
+    if n <= 0:
+        return (None, None)
+    phat = successes / n
+    denom = 1 + z**2 / n
+    center = (phat + z**2 / (2 * n)) / denom
+    half_width = z * math.sqrt((phat * (1 - phat) + z**2 / (4 * n)) / n) / denom
+    low = max(0.0, center - half_width)
+    high = min(1.0, center + half_width)
+    if successes == 0:
+        low = 0.0
+    if successes == n:
+        high = 1.0
+    return low, high
+
+
 def format_float(value: float | None) -> str:
     return "" if value is None else f"{value:.6f}"
+
+
+def wilson_fields(prefix: str, successes: int, n: int) -> dict[str, str]:
+    low, high = wilson_interval(successes, n)
+    return {
+        f"{prefix}_count": str(successes),
+        f"{prefix}_denominator": str(n),
+        f"{prefix}_wilson95_low": format_float(low),
+        f"{prefix}_wilson95_high": format_float(high),
+    }
 
 
 def comparison_row(name: str, left: list[dict[str, Any]], right: list[dict[str, Any]]) -> dict[str, str]:
@@ -137,7 +176,8 @@ def comparison_row(name: str, left: list[dict[str, Any]], right: list[dict[str, 
         sum(1 for a, b in zip(violations_left, violations_right, strict=True) if a == b) / n if n else None
     )
     precision, recall, f1 = precision_recall_f1(violations_left, violations_right)
-    return {
+    pr_counts = precision_recall_counts(violations_left, violations_right)
+    row = {
         "comparison": name,
         "n_items": str(n),
         "left_violation_rate": format_float(sum(violations_left) / n if n else None),
@@ -150,13 +190,25 @@ def comparison_row(name: str, left: list[dict[str, Any]], right: list[dict[str, 
         "recall_left_vs_right": format_float(recall),
         "f1_left_vs_right": format_float(f1),
     }
+    row.update(wilson_fields("left_violation_rate", sum(violations_left), n))
+    row.update(wilson_fields("right_violation_rate", sum(violations_right), n))
+    row.update(
+        wilson_fields(
+            "binary_violation_agreement",
+            sum(1 for a, b in zip(violations_left, violations_right, strict=True) if a == b),
+            n,
+        )
+    )
+    row.update(wilson_fields("precision_left_vs_right", pr_counts["tp"], pr_counts["predicted_positive"]))
+    row.update(wilson_fields("recall_left_vs_right", pr_counts["tp"], pr_counts["target_positive"]))
+    return row
 
 
 def summary_row(name: str, decisions: list[dict[str, Any]]) -> dict[str, str]:
     n = len(decisions)
     violations = [bool(item["violation"]) for item in decisions]
     mean_severity = sum(int(item["severity"]) for item in decisions) / n if n else None
-    return {
+    row = {
         "comparison": name,
         "n_items": str(n),
         "left_violation_rate": format_float(sum(violations) / n if n else None),
@@ -170,6 +222,8 @@ def summary_row(name: str, decisions: list[dict[str, Any]]) -> dict[str, str]:
         "f1_left_vs_right": "",
         "mean_max_severity": format_float(mean_severity),
     }
+    row.update(wilson_fields("left_violation_rate", sum(violations), n))
+    return row
 
 
 def write_predictions(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -255,6 +309,10 @@ def main() -> int:
     parser.add_argument("--audit-sample", default="data/audit/audit_sample.csv")
     parser.add_argument("--out", default="paper/tables/audit_agreement.csv")
     parser.add_argument("--predictions-out", default="data/audit/audit_predictions.csv")
+    parser.add_argument(
+        "--existing-predictions",
+        help="Optional existing prediction CSV to reuse when writing predictions to a different output path.",
+    )
     parser.add_argument("--scenario-disagreement-out", default="paper/tables/audit_disagreement_by_scenario.csv")
     parser.add_argument(
         "--fact-category-disagreement-out",
@@ -267,7 +325,7 @@ def main() -> int:
     args = parser.parse_args()
 
     sample = pd.read_csv(args.audit_sample).fillna("")
-    existing_predictions = load_existing_predictions(args.predictions_out)
+    existing_predictions = load_existing_predictions(args.existing_predictions or args.predictions_out)
     deterministic = DeterministicEthicsEvaluator()
     judge = None
     if args.llm_judge:
@@ -367,13 +425,33 @@ def main() -> int:
         "comparison",
         "n_items",
         "left_violation_rate",
+        "left_violation_rate_count",
+        "left_violation_rate_denominator",
+        "left_violation_rate_wilson95_low",
+        "left_violation_rate_wilson95_high",
         "right_violation_rate",
+        "right_violation_rate_count",
+        "right_violation_rate_denominator",
+        "right_violation_rate_wilson95_low",
+        "right_violation_rate_wilson95_high",
         "label_agreement",
         "binary_violation_agreement",
+        "binary_violation_agreement_count",
+        "binary_violation_agreement_denominator",
+        "binary_violation_agreement_wilson95_low",
+        "binary_violation_agreement_wilson95_high",
         "label_kappa",
         "binary_violation_kappa",
         "precision_left_vs_right",
+        "precision_left_vs_right_count",
+        "precision_left_vs_right_denominator",
+        "precision_left_vs_right_wilson95_low",
+        "precision_left_vs_right_wilson95_high",
         "recall_left_vs_right",
+        "recall_left_vs_right_count",
+        "recall_left_vs_right_denominator",
+        "recall_left_vs_right_wilson95_low",
+        "recall_left_vs_right_wilson95_high",
         "f1_left_vs_right",
         "mean_max_severity",
     ]

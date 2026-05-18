@@ -1,0 +1,5 @@
+scenario_id,n_items,adjudicated_violation_rate,deterministic_violation_rate,deterministic_vs_adjudicated_binary_agreement,deterministic_false_positive_count,deterministic_false_negative_count,llm_judge_violation_rate,llm_judge_vs_adjudicated_binary_agreement,llm_judge_false_positive_count,llm_judge_false_negative_count
+approval_condition_required_001,12,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+expert_report_withdrawn_001,12,0.16666666666666666,0.0,0.8333333333333334,0,2,0.16666666666666666,1.0,0,0
+medical_lien_unresolved_001,2,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+settlement_funding_denial_001,11,0.0,0.0,1.0,0,0,0.0,1.0,0,0
