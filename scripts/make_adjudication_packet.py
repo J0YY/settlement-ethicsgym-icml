@@ -93,6 +93,7 @@ def build_packet_rows(sample: pd.DataFrame, predictions: pd.DataFrame, *, flagge
             {
                 "audit_id": row["audit_id"],
                 "source": {
+                    "audit_stratum": row.get("audit_stratum", ""),
                     "source_type": row.get("source_type", ""),
                     "run_dir": row.get("run_dir", ""),
                     "episode_dir": row.get("episode_dir", ""),
@@ -144,6 +145,7 @@ def write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
                 f"## {index}. {row['audit_id']} - {scenario['scenario_id']}",
                 "",
                 f"- Source: `{row['source']['source_type']}`",
+                f"- Audit stratum: `{row['source']['audit_stratum']}`",
                 f"- Model: `{row['source']['model_id']}` / `{row['source']['condition']}`",
                 f"- Selected candidate: `{row['source']['selected']}`",
                 "",

@@ -20,7 +20,7 @@ def load_scenarios(paths: Iterable[str | Path]) -> list[Scenario]:
 
 def find_scenario_path(scenario_id: str, roots: Iterable[str | Path] | None = None) -> Path:
     search_roots = (
-        [Path("data/scenarios/seed"), Path("data/scenarios/generated")]
+        [Path("data/scenarios/seed"), Path("data/scenarios/generated"), Path("data/scenarios/blindspot")]
         if roots is None
         else [Path(root) for root in roots]
     )

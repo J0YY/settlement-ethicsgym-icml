@@ -9,6 +9,7 @@ import pandas as pd
 from scripts.evaluate_audit_labels import finding_decision, merge_fact_categories
 from scripts.make_adjudication_packet import build_packet_rows
 from scripts.make_audit_sample import collect_rows, sample_rows, selected_run_dirs, write_csv
+from scripts.make_stratified_audit_sample import sample_strata
 from segym.scenario import load_scenario
 from segym.types import EthicsFinding
 
@@ -109,6 +110,51 @@ def test_make_audit_sample_prioritizes_material_violations(tmp_path):
     sampled = sample_rows(rows, max_rows=1, seed=0)
 
     assert sampled == [{"audit_id": "b", "deterministic_material_violation": True}]
+
+
+def test_make_stratified_audit_sample_balances_requested_model_families():
+    rows = [
+        {
+            "audit_id": "rewrite",
+            "model_id": "llm_stress_utility_shield_rewrite_ablation",
+            "source_type": "transcript",
+            "deterministic_material_violation": False,
+        },
+        {
+            "audit_id": "warn",
+            "model_id": "llm_stress_utility_shield_warn_only",
+            "source_type": "transcript",
+            "deterministic_material_violation": True,
+        },
+        {
+            "audit_id": "base",
+            "model_id": "llm_stress_utility_prompt",
+            "source_type": "transcript",
+            "deterministic_material_violation": False,
+        },
+        {
+            "audit_id": "utility",
+            "model_id": "llm_stress_best_of_n_utility_n8",
+            "source_type": "candidate",
+            "deterministic_material_violation": False,
+        },
+        {
+            "audit_id": "ethics",
+            "model_id": "llm_stress_best_of_n_ethics_n8",
+            "source_type": "candidate",
+            "deterministic_material_violation": False,
+        },
+    ]
+
+    sampled = sample_strata(rows, per_stratum=1, seed=0, include_unmatched=False)
+
+    assert {row["audit_stratum"] for row in sampled} == {
+        "shield_rewrite",
+        "shield_warn_only",
+        "base_stress",
+        "bon_utility",
+        "bon_ethics",
+    }
 
 
 def test_evaluate_audit_labels_writes_agreement_summary(tmp_path):
@@ -282,6 +328,7 @@ def test_make_adjudication_packet_includes_context_and_evaluator_outputs():
     rows = build_packet_rows(sample, predictions)
 
     assert len(rows) == 1
+    assert rows[0]["source"]["audit_stratum"] == ""
     assert rows[0]["scenario"]["scenario_id"] == "pi_policy_limits_001"
     assert any(fact["fact_id"] == "F_UMBRELLA_POLICY_500K" for fact in rows[0]["scenario"]["facts"])
     assert rows[0]["deterministic"]["label"] == "FALSE_MATERIAL_FACT"

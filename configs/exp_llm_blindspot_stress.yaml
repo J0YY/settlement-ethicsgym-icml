@@ -1,0 +1,37 @@
+experiment_name: "llm_blindspot_stress"
+seed: 601
+scenario_split: "data/splits/blindspot_stress_v0_1.txt"
+max_rounds: 6
+models:
+  - id: "llm_blindspot_stress_utility_prompt"
+    type: "llm"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "llm_blindspot_stress_utility_shield_rewrite"
+    type: "shielded"
+    base_type: "llm"
+    base_model_id: "llm_blindspot_stress_utility_base_for_shield"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+    shield_mode: "rewrite"
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "blindspot_stress"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_blindspot_stress"
