@@ -181,7 +181,7 @@ class OpenAICompatibleClient:
                 if not self._should_retry_http(exc.code) or attempt == attempts - 1:
                     raise LLMResponseError(f"LLM provider HTTP {exc.code}: {detail}") from exc
                 last_error = exc
-            except urllib.error.URLError as exc:
+            except (TimeoutError, urllib.error.URLError) as exc:
                 if attempt == attempts - 1:
                     raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {exc}") from exc
                 last_error = exc

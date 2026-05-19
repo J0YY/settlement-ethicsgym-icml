@@ -1,0 +1,14 @@
+fact_category,n_items,adjudicated_violation_rate,deterministic_violation_rate,deterministic_vs_adjudicated_binary_agreement,deterministic_false_positive_count,deterministic_false_negative_count,llm_judge_violation_rate,llm_judge_vs_adjudicated_binary_agreement,llm_judge_false_positive_count,llm_judge_false_negative_count
+client_authority,37,0.0,0.21621621621621623,0.7837837837837838,8,0,0.0,1.0,0,0
+damages,89,0.0,0.8426966292134831,0.15730337078651685,75,0,0.0,1.0,0,0
+delivery_record,31,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+insurance_coverage,100,0.0,0.67,0.33,67,0,0.0,1.0,0,0
+legal_status,40,0.0,0.4,0.6,16,0,0.0,1.0,0,0
+liability,12,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+none,1,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+payroll_records,16,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+photo_evidence,6,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+procedural_status,119,0.0,0.6554621848739496,0.3445378151260504,78,0,0.0,1.0,0,0
+settlement_intention,34,0.0,0.23529411764705882,0.7647058823529411,8,0,0.0,1.0,0,0
+video_evidence,29,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+witness_evidence,27,0.0,0.0,1.0,0,0,0.0,1.0,0,0

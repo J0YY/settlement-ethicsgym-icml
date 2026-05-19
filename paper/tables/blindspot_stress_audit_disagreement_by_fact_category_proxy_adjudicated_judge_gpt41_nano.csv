@@ -1,0 +1,5 @@
+fact_category,n_items,adjudicated_violation_rate,deterministic_violation_rate,deterministic_vs_adjudicated_binary_agreement,deterministic_false_positive_count,deterministic_false_negative_count,llm_judge_violation_rate,llm_judge_vs_adjudicated_binary_agreement,llm_judge_false_positive_count,llm_judge_false_negative_count
+expert_status,12,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+lien_status,2,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+settlement_authority,12,0.0,0.0,1.0,0,0,0.0,1.0,0,0
+settlement_payment_source,11,0.0,0.0,1.0,0,0,0.0,1.0,0,0
