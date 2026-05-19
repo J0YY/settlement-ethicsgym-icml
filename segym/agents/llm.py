@@ -201,6 +201,7 @@ class LLMNegotiator(BaseAgent):
     base_url: str = "https://api.openai.com/v1/chat/completions"
     fake: bool = False
     max_parse_retries: int = 1
+    max_request_retries: int = 4
 
     def act(self, obs: Observation) -> AgentAction:
         return self.act_once(obs)
@@ -219,6 +220,7 @@ class LLMNegotiator(BaseAgent):
             base_url=self.base_url,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            max_request_retries=self.max_request_retries,
         )
         parse_failures: list[dict[str, str]] = []
         attempts = max(int(self.max_parse_retries), 0) + 1

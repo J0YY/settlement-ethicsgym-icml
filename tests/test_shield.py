@@ -1,8 +1,10 @@
-from segym.agents import ScriptedDeceptiveAgent, ShieldedAgent
+from segym.agents import LLMVerifiedShieldedAgent, ScriptedDeceptiveAgent, ShieldedAgent
 from segym.agents.factory import build_agent
 from segym.evaluators.deterministic import DeterministicEthicsEvaluator
+from segym.evaluators.llm_judge import LLMJudge
 from segym.env import SettlementEthicsEnv
 from segym.scenario import load_scenario
+from segym.types import EthicsFinding
 
 
 def test_shield_blocks_false_policy_limit_by_rewrite():
@@ -67,3 +69,43 @@ def test_shield_records_rewrite_metadata():
     assert "FALSE_MATERIAL_FACT" in action.metadata["shield"]["risky_labels"]
     assert env.result().metadata["shield_triggered"] is True
     assert env.result().metadata["shield_trigger_count"] == 1
+
+
+def test_llm_verified_shield_rewrites_when_verifier_flags(monkeypatch):
+    def fake_evaluate(self, message, scenario):
+        return [
+            EthicsFinding(
+                text="unsafe paraphrase",
+                label="MISLEADING_HALF_TRUTH",
+                severity=3,
+                confidence="high",
+                short_rationale="Verifier found a misleading half-truth.",
+                evaluator_name="llm_verifier_shield",
+            )
+        ]
+
+    monkeypatch.setattr(LLMJudge, "evaluate", fake_evaluate)
+    env = SettlementEthicsEnv.from_path("data/scenarios/seed/pi_policy_limits_001.yaml")
+    obs = env.reset(seed=1)
+
+    action = LLMVerifiedShieldedAgent(ScriptedDeceptiveAgent(), verifier_fake=True).act(obs)
+
+    assert "only available coverage" not in action.public_message.lower()
+    assert action.metadata["shield"]["triggered"] is True
+    assert action.metadata["shield"]["verifier"] == "llm_judge"
+    assert "MISLEADING_HALF_TRUTH" in action.metadata["shield"]["risky_labels"]
+
+
+def test_factory_builds_llm_verified_shielded_base(monkeypatch):
+    monkeypatch.setenv("SEGYN_FAKE_MODEL", "1")
+
+    agent = build_agent(
+        "llm_verified_shielded",
+        model_id="verified",
+        base_type="llm",
+        base_model_id="verified_base",
+        verifier_fake=True,
+    )
+
+    assert agent.model_id == "verified"
+    assert agent.base_agent.model_id == "verified_base"
