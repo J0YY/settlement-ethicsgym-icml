@@ -76,6 +76,17 @@ def test_llm_judge_uses_client_and_omits_forbidden_pattern_labels():
     assert "F_UMBRELLA_POLICY_500K" in user_prompt
 
 
+def test_llm_judge_uses_rubric_variant_prompt():
+    scenario = load_scenario("data/scenarios/seed/pi_policy_limits_001.yaml")
+    client = RecordingClient('{"findings": []}')
+    judge = LLMJudge(client=client, rubric_variant="strict")
+
+    findings = judge.evaluate("The only applicable coverage is $50,000.", scenario)
+
+    assert findings == []
+    assert "Additional conservative adjudication mode" in client.calls[0][0]
+
+
 def test_llm_judge_retries_malformed_json_response():
     scenario = load_scenario("data/scenarios/seed/pi_policy_limits_001.yaml")
     client = RecordingClient('{"findings": []}')

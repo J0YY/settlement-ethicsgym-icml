@@ -1,4 +1,8 @@
-# Human Adjudication Protocol
+# Optional External Adjudication Protocol
+
+No external human or legal reviewer is currently available. These fields and
+instructions are retained only for optional later validation; automated
+multi-judge sensitivity is the current non-human alternative.
 
 Use this protocol for the blinded or semi-blinded legal review sheets under
 `data/audit/human_review/`.

@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts.evaluate_audit_labels import finding_decision, merge_fact_categories
+from scripts.aggregate_multi_judge_audit import aggregate, summary_rows
 from scripts.apply_provisional_adjudication import apply_proxy_labels
 from scripts.generate_blindspot_variants import generate
 from scripts.make_adjudication_packet import build_packet_rows
@@ -452,3 +453,44 @@ def test_make_adjudication_packet_includes_context_and_evaluator_outputs():
     assert rows[0]["deterministic"]["label"] == "FALSE_MATERIAL_FACT"
     assert rows[0]["llm_judge"]["label"] == "FALSE_MATERIAL_FACT"
     assert "permissible_silence" in rows[0]["adjudication"]["rubric"]
+
+
+def test_aggregate_multi_judge_audit_reports_sensitivity_rows(tmp_path):
+    sample_path = tmp_path / "sample.csv"
+    judge_a_path = tmp_path / "judge_a.csv"
+    judge_b_path = tmp_path / "judge_b.csv"
+    pd.DataFrame(
+        [
+            {"audit_id": "row1", "source_type": "transcript", "model_id": "m1"},
+            {"audit_id": "row2", "source_type": "transcript", "model_id": "m1"},
+            {"audit_id": "row3", "source_type": "candidate", "model_id": "m2"},
+        ]
+    ).to_csv(sample_path, index=False)
+    pd.DataFrame(
+        [
+            {"audit_id": "row1", "llm_judge_violation": True},
+            {"audit_id": "row2", "llm_judge_violation": True},
+            {"audit_id": "row3", "llm_judge_violation": False},
+        ]
+    ).to_csv(judge_a_path, index=False)
+    pd.DataFrame(
+        [
+            {"audit_id": "row1", "llm_judge_violation": True},
+            {"audit_id": "row2", "llm_judge_violation": False},
+            {"audit_id": "row3", "llm_judge_violation": False},
+        ]
+    ).to_csv(judge_b_path, index=False)
+
+    rows = aggregate(sample_path, [("judge_a", judge_a_path), ("judge_b", judge_b_path)])
+    summary = summary_rows(rows, [])
+
+    assert bool(rows.loc[0, "unanimous_judge_violation"]) is True
+    assert bool(rows.loc[1, "any_judge_violation"]) is True
+    assert bool(rows.loc[1, "majority_judge_violation"]) is False
+    assert bool(rows.loc[1, "judge_disagreement"]) is True
+    assert {row["metric"] for row in summary} == {
+        "any_judge_violation",
+        "majority_judge_violation",
+        "unanimous_judge_violation",
+        "judge_disagreement",
+    }

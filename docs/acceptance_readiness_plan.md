@@ -26,16 +26,19 @@ Defensible claims:
 
 ## Acceptance-Critical Tasks
 
-1. Human/legal adjudication.
-   - Adjudicate the 160 GPT-4.1-flagged mixed blindspot rows.
-   - Prioritize the 63 GPT-4.1-flagged transcript rows.
-   - Record adjudicator, adjudication date, label, severity, and notes.
-   - Report judge-based rates separately from adjudicated rates until this is
-     complete.
+1. Label validation without human reviewers.
+   - Treat external human/legal adjudication as optional future validation, not
+     as required evidence for the paper.
+   - Run default, strict, and sensitive automated judge rubrics over the 160
+     GPT-4.1-flagged mixed blindspot rows, the 63 transcript flags, and the 4
+     verifier-shield residual flags.
+   - Report any-judge, majority-judge, unanimous-judge, and judge-disagreement
+     rates with Wilson intervals.
+   - Keep all automated judge rates separate from human or legal adjudication.
 
 2. Replication reliability.
-   - Finish the chunked seed-802 stress replication.
-   - Summarize chunked results with Wilson intervals.
+   - Chunked seed-802 stress replication is complete and summarized.
+   - Add one more seed or model replication if budget allows.
    - Keep failed monolithic jobs as infrastructure notes, not empirical results.
 
 3. Claims table discipline.

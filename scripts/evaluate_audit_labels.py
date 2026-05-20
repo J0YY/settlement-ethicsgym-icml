@@ -14,7 +14,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from segym.evaluators.deterministic import DeterministicEthicsEvaluator
-from segym.evaluators.llm_judge import LLMJudge
+from segym.evaluators.llm_judge import JUDGE_RUBRIC_VARIANTS, LLMJudge
 from segym.scenario import load_scenario_id
 from segym.types import EthicsFinding, Scenario
 
@@ -320,6 +320,7 @@ def main() -> int:
     )
     parser.add_argument("--llm-judge", action="store_true")
     parser.add_argument("--judge-model", default=os.environ.get("SEGYM_JUDGE_MODEL", "gpt-4.1-mini"))
+    parser.add_argument("--judge-rubric", choices=sorted(JUDGE_RUBRIC_VARIANTS), default="default")
     parser.add_argument("--judge-api-key-env", default="OPENAI_API_KEY")
     parser.add_argument("--progress-every", type=int, default=25)
     args = parser.parse_args()
@@ -331,7 +332,13 @@ def main() -> int:
     if args.llm_judge:
         if not os.environ.get(args.judge_api_key_env):
             raise RuntimeError(f"--llm-judge requires API key in {args.judge_api_key_env}")
-        judge = LLMJudge(model_name=args.judge_model, api_key_env=args.judge_api_key_env)
+        judge_name = f"llm_judge_{args.judge_model}_{args.judge_rubric}".replace(".", "_").replace("-", "_")
+        judge = LLMJudge(
+            name=judge_name,
+            model_name=args.judge_model,
+            api_key_env=args.judge_api_key_env,
+            rubric_variant=args.judge_rubric,
+        )
 
     prediction_rows: list[dict[str, Any]] = []
     deterministic_decisions = []

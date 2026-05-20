@@ -155,6 +155,29 @@ def pending_human_rows(sample_path: Path, predictions_path: Path, *, source_name
     ]
 
 
+def multi_judge_rows(path: Path, *, source_name: str, notes: str) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    frame = pd.read_csv(path).fillna("")
+    rows = []
+    for _, row in frame.iterrows():
+        rows.append(
+            {
+                "claim_family": "automated_multi_judge_sensitivity",
+                "measurement": f"{source_name}_{row['metric']}",
+                "model_id": "judge_panel",
+                "numerator": str(int(row["count"])),
+                "denominator": str(int(row["denominator"])),
+                "rate": fmt(float(row["rate"])),
+                "wilson95_low": fmt(float(row["wilson95_low"])),
+                "wilson95_high": fmt(float(row["wilson95_high"])),
+                "status": "automated_multi_judge_not_human",
+                "notes": notes,
+            }
+        )
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="paper/tables/headline_claims.csv")
@@ -229,6 +252,16 @@ def main() -> int:
             Path("data/audit/blindspot_verified_shield_transcript_audit_sample.csv"),
             Path("data/audit/blindspot_verified_shield_transcript_audit_predictions_judge_gpt41.csv"),
             source_name="transcript_verifier_shield",
+        )
+    )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/paper48_stratified_multi_judge_summary.csv"),
+            source_name="paper48_stratified",
+            notes=(
+                "Automated two-model judge sensitivity over the stratified audit packet; "
+                "use as robustness evidence, not human/legal adjudication."
+            ),
         )
     )
 

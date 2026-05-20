@@ -1,0 +1,5 @@
+count,denominator,mean_judge_count,mean_positive_judge_count,metric,rate,wilson95_high,wilson95_low
+107,400,2.000000,0.267500,any_judge_violation,0.267500,0.312941,0.226482
+0,400,2.000000,0.267500,majority_judge_violation,0.000000,0.009512,0.000000
+0,400,2.000000,0.267500,unanimous_judge_violation,0.000000,0.009512,0.000000
+107,400,2.000000,0.267500,judge_disagreement,0.267500,0.312941,0.226482
