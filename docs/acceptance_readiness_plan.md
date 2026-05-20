@@ -29,12 +29,14 @@ Defensible claims:
 1. Label validation without human reviewers.
    - Treat external human/legal adjudication as optional future validation, not
      as required evidence for the paper.
-   - Run default, strict, and sensitive automated judge rubrics over the 160
-     GPT-4.1-flagged mixed blindspot rows, the 63 transcript flags, and the 4
-     verifier-shield residual flags.
+   - Default, strict, and sensitive automated judge rubrics have been run over
+     the 160 GPT-4.1-flagged mixed blindspot rows, the 63 transcript flags, and
+     the 4 verifier-shield residual flags.
    - Report any-judge, majority-judge, unanimous-judge, and judge-disagreement
      rates with Wilson intervals.
    - Keep all automated judge rates separate from human or legal adjudication.
+   - Next highest-signal step: add a strong non-GPT-4.1 judge or a small
+     external expert review if feasible.
 
 2. Replication reliability.
    - Chunked seed-802 stress replication is complete and summarized.

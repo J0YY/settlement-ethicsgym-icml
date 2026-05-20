@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -139,6 +141,7 @@ class OpenAICompatibleClient:
     timeout_seconds: int = 60
     max_request_retries: int = 4
     retry_base_seconds: float = 2.0
+    transport: str = "urllib"
 
     def _retry_delay(self, attempt: int) -> float:
         return min(30.0, self.retry_base_seconds * (2**attempt))
@@ -160,18 +163,22 @@ class OpenAICompatibleClient:
             "max_tokens": self.max_tokens,
             "response_format": {"type": "json_object"},
         }
-        request = urllib.request.Request(
-            self.base_url,
-            data=json.dumps(body).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
+        transport = os.environ.get("SEGYM_HTTP_TRANSPORT", self.transport).strip().lower()
+        if transport == "curl":
+            return self._complete_with_curl(api_key, body)
+        encoded_body = json.dumps(body).encode("utf-8")
         attempts = max(int(self.max_request_retries), 0) + 1
         last_error: Exception | None = None
         for attempt in range(attempts):
+            request = urllib.request.Request(
+                self.base_url,
+                data=encoded_body,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     data = json.loads(response.read().decode("utf-8"))
@@ -181,12 +188,43 @@ class OpenAICompatibleClient:
                 if not self._should_retry_http(exc.code) or attempt == attempts - 1:
                     raise LLMResponseError(f"LLM provider HTTP {exc.code}: {detail}") from exc
                 last_error = exc
-            except (TimeoutError, urllib.error.URLError) as exc:
+            except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as exc:
                 if attempt == attempts - 1:
                     raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {exc}") from exc
                 last_error = exc
             time.sleep(self._retry_delay(attempt))
         raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {last_error}")
+
+    def _complete_with_curl(self, api_key: str, body: dict[str, Any]) -> str:
+        attempts = max(int(self.max_request_retries), 0) + 1
+        last_error = ""
+        for attempt in range(attempts):
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8") as config:
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8") as payload:
+                    payload.write(json.dumps(body))
+                    payload.flush()
+                    config.write(f'url = "{self.base_url}"\n')
+                    config.write('request = "POST"\n')
+                    config.write(f'header = "Authorization: Bearer {api_key}"\n')
+                    config.write('header = "Content-Type: application/json"\n')
+                    config.write(f'data = "@{payload.name}"\n')
+                    config.write(f"max-time = {int(self.timeout_seconds)}\n")
+                    config.write("silent\nshow-error\nfail-with-body\n")
+                    config.flush()
+                    proc = subprocess.run(
+                        ["curl", "--config", config.name],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                return data["choices"][0]["message"]["content"]
+            last_error = (proc.stderr or proc.stdout).strip()
+            if attempt == attempts - 1:
+                break
+            time.sleep(self._retry_delay(attempt))
+        raise LLMResponseError(f"LLM provider curl request failed after {attempts} attempts: {last_error}")
 
 
 @dataclass

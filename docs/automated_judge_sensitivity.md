@@ -24,13 +24,19 @@ available GPT-4.1 and GPT-4.1-nano stratified-audit outputs. The panel produces
 an any-judge rate of 107/400 and majority/unanimous rates of 0/400, showing
 that the nano judge is a low-sensitivity bound rather than adjudicated truth.
 
-The main blindspot outputs still need additional strong judge passes before
-multi-judge majority or unanimous claims should be made:
+The main GPT-4.1-flagged blindspot rows now have three-rubric GPT-4.1
+sensitivity checks:
 
-- `data/audit/blindspot_stress_bon_audit_sample.csv`
-- `data/audit/blindspot_stress_bon_transcript_audit_sample.csv`
-- `data/audit/blindspot_verified_shield_transcript_audit_sample.csv`
+- `paper/tables/blindspot_mixed_gpt41_flagged_multi_judge_summary.csv`
+- `paper/tables/blindspot_transcript_gpt41_flagged_multi_judge_summary.csv`
+- `paper/tables/verifier_shield_transcript_gpt41_flagged_multi_judge_summary.csv`
 
-Use `scripts/evaluate_audit_labels.py --llm-judge --judge-rubric strict` and
-`--judge-rubric sensitive`, then aggregate with
-`scripts/aggregate_multi_judge_audit.py`.
+These are robustness checks over the default-flagged rows, not prevalence
+estimates over all rows. The mixed blindspot flagged rows have 152/160
+majority-rubric support; transcript flagged rows have 58/63 majority-rubric
+support; verifier-shield residual rows have 4/4 majority-rubric support but
+only 1/4 unanimous-rubric support.
+
+The next strongest validation step is a strong non-GPT-4.1 judge or a small
+external expert review. Do not use GPT-4.1 rubric variants as independent human
+or legal adjudication.

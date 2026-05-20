@@ -323,6 +323,17 @@ def main() -> int:
     parser.add_argument("--judge-rubric", choices=sorted(JUDGE_RUBRIC_VARIANTS), default="default")
     parser.add_argument("--judge-api-key-env", default="OPENAI_API_KEY")
     parser.add_argument("--progress-every", type=int, default=25)
+    parser.add_argument(
+        "--resume-existing-judge",
+        action="store_true",
+        help="Reuse existing LLM judge findings from the predictions output when present.",
+    )
+    parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=0,
+        help="Write partial predictions every N rows. Useful for long real judge runs.",
+    )
     args = parser.parse_args()
 
     sample = pd.read_csv(args.audit_sample).fillna("")
@@ -363,7 +374,15 @@ def main() -> int:
             "fact_categories": merge_fact_categories(fact_categories_for_findings(det_findings, scenario)),
         }
         if judge:
-            judge_findings = judge.evaluate(message, scenario)
+            existing_row = existing_predictions.get(str(row["audit_id"]), {})
+            judge_findings = []
+            if args.resume_existing_judge:
+                try:
+                    judge_findings = parse_existing_findings(str(existing_row.get("llm_judge_findings_json", "")))
+                except (json.JSONDecodeError, ValueError):
+                    judge_findings = []
+            if not judge_findings:
+                judge_findings = judge.evaluate(message, scenario)
             judge_decision = finding_decision(judge_findings)
             llm_decisions.append(judge_decision)
             output.update(
@@ -415,6 +434,8 @@ def main() -> int:
                 }
             )
         prediction_rows.append(output)
+        if args.checkpoint_every > 0 and len(prediction_rows) % args.checkpoint_every == 0:
+            write_predictions(Path(args.predictions_out), prediction_rows)
 
     rows = [summary_row("deterministic_summary", deterministic_decisions)]
     if len(llm_decisions) == len(deterministic_decisions):

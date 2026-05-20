@@ -264,6 +264,36 @@ def main() -> int:
             ),
         )
     )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/blindspot_mixed_gpt41_flagged_multi_judge_summary.csv"),
+            source_name="blindspot_mixed_flagged_three_rubric",
+            notes=(
+                "Automated GPT-4.1 three-rubric sensitivity over rows flagged by the default GPT-4.1 judge; "
+                "use as robustness evidence, not human/legal adjudication."
+            ),
+        )
+    )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/blindspot_transcript_gpt41_flagged_multi_judge_summary.csv"),
+            source_name="blindspot_transcript_flagged_three_rubric",
+            notes=(
+                "Automated GPT-4.1 three-rubric sensitivity over transcript rows flagged by the default GPT-4.1 judge; "
+                "use as robustness evidence, not human/legal adjudication."
+            ),
+        )
+    )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/verifier_shield_transcript_gpt41_flagged_multi_judge_summary.csv"),
+            source_name="verifier_shield_flagged_three_rubric",
+            notes=(
+                "Automated GPT-4.1 three-rubric sensitivity over verifier-shield residual rows flagged by the default GPT-4.1 judge; "
+                "use as robustness evidence, not human/legal adjudication."
+            ),
+        )
+    )
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
