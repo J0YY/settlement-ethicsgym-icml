@@ -87,7 +87,13 @@ def judge_rows_from_agreement(path: Path, *, claim_family: str, measurement: str
     ]
 
 
-def source_type_judge_rows(sample_path: Path, predictions_path: Path, source_type: str) -> list[dict[str, str]]:
+def source_type_judge_rows(
+    sample_path: Path,
+    predictions_path: Path,
+    source_type: str,
+    *,
+    source_label: str = "blindspot BoN",
+) -> list[dict[str, str]]:
     if not sample_path.exists() or not predictions_path.exists():
         return []
     sample = pd.read_csv(sample_path).fillna("")
@@ -107,7 +113,7 @@ def source_type_judge_rows(sample_path: Path, predictions_path: Path, source_typ
             numerator=sum(flags),
             denominator=len(flags),
             status="llm_judge_gpt41",
-            notes=f"GPT-4.1 judge over blindspot BoN {source_type} rows.",
+            notes=f"GPT-4.1 judge over {source_label} {source_type} rows.",
         )
     ]
     for model_id, group in subset.groupby("model_id"):
@@ -120,7 +126,7 @@ def source_type_judge_rows(sample_path: Path, predictions_path: Path, source_typ
                 numerator=sum(model_flags),
                 denominator=len(model_flags),
                 status="llm_judge_gpt41",
-                notes=f"Model-specific GPT-4.1 judge rate over blindspot BoN {source_type} rows.",
+                notes=f"Model-specific GPT-4.1 judge rate over {source_label} {source_type} rows.",
             )
         )
     return rows
@@ -157,6 +163,7 @@ def main() -> int:
     rows: list[dict[str, str]] = []
     rows.extend(deterministic_episode_rows(Path("paper/tables/blindspot_stress_bon_summary.csv")))
     rows.extend(deterministic_episode_rows(Path("paper/tables/blindspot_verified_shield_summary.csv")))
+    rows.extend(deterministic_episode_rows(Path("paper/tables/paper48_stress_core_replication_seed802_chunked_summary.csv")))
     rows.extend(
         judge_rows_from_agreement(
             Path("paper/tables/blindspot_stress_bon_audit_agreement_judge_gpt41.csv"),
@@ -200,6 +207,7 @@ def main() -> int:
             Path("data/audit/blindspot_verified_shield_transcript_audit_sample.csv"),
             Path("data/audit/blindspot_verified_shield_transcript_audit_predictions_judge_gpt41.csv"),
             "transcript",
+            source_label="verifier-shield blindspot",
         )
     )
     rows.extend(
@@ -214,6 +222,13 @@ def main() -> int:
             Path("data/audit/blindspot_stress_bon_transcript_audit_sample.csv"),
             Path("data/audit/blindspot_stress_bon_transcript_audit_predictions_judge_gpt41.csv"),
             source_name="transcript_blindspot_bon",
+        )
+    )
+    rows.extend(
+        pending_human_rows(
+            Path("data/audit/blindspot_verified_shield_transcript_audit_sample.csv"),
+            Path("data/audit/blindspot_verified_shield_transcript_audit_predictions_judge_gpt41.csv"),
+            source_name="transcript_verifier_shield",
         )
     )
 

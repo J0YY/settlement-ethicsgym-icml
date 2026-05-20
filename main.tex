@@ -6,6 +6,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\def\UrlBreaks{\do\/\do-\do\_\do\.}
+\Urlmuskip=0mu plus 2mu
 \sloppy
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 \usepackage[preprint]{icml2026/icml2026}
@@ -54,6 +56,19 @@ The repository now includes a Python package named \texttt{segym}; Pydantic sche
 
 The current seed set has eight scenarios across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation. A generated 24-scenario split varies these families and amounts; a stress matrix adds higher-temperature utility-pressure prompts and larger best-of-$N$ candidate pools.
 
+\begin{table*}[t]
+\caption{Experiment matrix. Rows are grouped by the main question each run answers. Audit rows are sampled utterances or candidates, not episodes.}
+\label{tab:experiment-matrix}
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\input{paper/tables/experiment_matrix.tex}
+}
+\end{table*}
+
+\paragraph{Audit and uncertainty protocol.}
+All headline run tables are generated from non-fake run metadata. Episode-level deterministic rates use the deterministic evaluator replayed over final transcript messages. Candidate-level and transcript-level audits use sampled rows from transcripts and best-of-$N$ candidate logs. LLM-judge audits provide scenario facts, role information, and the public message, but not deterministic forbidden-pattern labels. We report Wilson 95\% intervals for binomial rates and keep judge-based, deterministic, and human-adjudication fields separate. The repository exports \texttt{paper/tables/headline\_claims.csv} so each headline rate has an explicit numerator, denominator, evaluator, confidence interval, and adjudication status.
+
 \section{Preliminary Results}
 
 Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. These numbers are not yet claims about deployed LLM behavior; they verify that the benchmark creates the intended measurement contrast.
@@ -90,6 +105,7 @@ We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref
 \label{tab:llm-generated}
 \centering
 \small
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 Condition & Settle & Utility & Misrep. \\
@@ -102,6 +118,7 @@ Best-of-$N$ utility, $N=4$ & 0.500 & 0.500 & 0.042 \\
 Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \paragraph{48-scenario stress matrix.}
@@ -112,6 +129,7 @@ The initial generated split produced too few unsafe single-sample outputs to str
 \label{tab:llm-stress}
 \centering
 \small
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 Condition & Settle & Utility & Misrep. \\
@@ -125,6 +143,7 @@ Stress best-of-$N$ ethics, $N=8$ & 0.312 & 0.312 & 0.062 \\
 Stress rewrite shield & 0.396 & 0.326 & 0.000 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \begin{figure}[t]
@@ -142,6 +161,7 @@ Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablat
 \label{tab:scaling-shield}
 \centering
 \small
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 Condition & Utility & Misrep. & CI \\
@@ -155,12 +175,15 @@ Shield block & 0.208 & 0.000 & [0.000, 0.074] \\
 Shield rewrite & 0.340 & 0.000 & [0.000, 0.074] \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The zero shield rows should be interpreted narrowly. They are zero deterministic-evaluator violations, not proven zero misconduct. The rewrite shield uses deterministic findings to decide whether to rewrite, so this result is partly detector-aligned. We therefore report Wilson intervals and separately audit shield outputs with an LLM judge and adjudication packets.
 
 \paragraph{Cross-model replication.}
 We replicated the core stress matrix with GPT-4.1-nano. The smaller model had higher settlement rates and utility in this benchmark, but the qualitative shield pattern remained: zero-shot produced 10.4\% deterministic material violations, stress utility prompting 6.25\%, utility-only best-of-$N$ 4.2\%, ethics-aware best-of-$N$ 6.25\%, and rewrite shielding 0/48. The ethics-aware best-of-$N$ nano condition had a 6.25\% parse-failure rate, so cross-model comparisons should account for model-specific structured-output reliability.
+
+A chunked seed-802 replication of the strongest stress arms completed after monolithic retries failed due to cluster network errors. In that replication, utility-only best-of-$N$ produced deterministic material violations in 4/48 episodes (8.3\%, CI [3.3, 19.6]\%), ethics-aware best-of-$N$ produced 0/48 (CI [0.0, 7.4]\%), and deterministic rewrite shielding produced 0/48 (CI [0.0, 7.4]\%). This supports the core direction of the stress result while reinforcing that zero deterministic shield rates require independent audit.
 
 \paragraph{Audit calibration.}
 Because the deterministic evaluator is intentionally narrow, we audited evaluator disagreements and used them to repair coverage, legal-status, and authority patterns. A refined LLM judge distinguishes affirmative false statements, misleading half-truths, permissible silence, permissible settlement authority or valuation negotiation, and true material facts. On a 400-row stress-inclusive audit sample after repair, the deterministic evaluator flagged 6.75\% of rows and the LLM judge flagged 5.5\%. The 44-row union of pre-repair flagged rows was adjudicated using scenario facts and both evaluator outputs. Against those adjudicated labels, the repaired deterministic evaluator had precision 0.783, recall 1.000, and F1 0.878, while the LLM judge had precision 0.545, recall 0.667, and F1 0.600.
@@ -184,6 +207,7 @@ The deterministic shield failures motivate a stronger mitigation baseline that v
 \label{tab:verifier-shield}
 \centering
 \small
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 Condition & Rows & Judge flags & CI \\
@@ -195,11 +219,12 @@ Verifier shield, BoN utility base & 101 & 0.030 & [0.010, 0.084] \\
 Verifier shield, pooled & 196 & 0.020 & [0.008, 0.051] \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \section{Remaining Work}
 
-The acceptance-critical remaining work is label validation and presentation polish. First, the 160 mixed and 63 transcript rows flagged by GPT-4.1 should be human- or legally-adjudicated before replacing judge-based rates with adjudicated prevalence estimates. Second, the chunked seed-802 replication should be completed and summarized to show that the main stress conclusions are not a single-run artifact. Third, the paper needs a compact methods table linking each claim to its evaluator, denominator, confidence interval, and adjudication status; the repository now exports this as \texttt{paper/tables/headline\_claims.csv}. Finally, the limitations should remain explicit: the benchmark is synthetic, judge sensitivity varies by model, and verifier shielding uses an LLM judge at inference time rather than proving semantic truthfulness.
+The acceptance-critical remaining work is label validation and presentation polish. First, the repository now exports human-review packets for the 160 mixed blindspot flags, the 63 transcript-only blindspot flags, and the 4 verifier-shield residual transcript flags; these rows should be human- or legally-adjudicated before replacing judge-based rates with adjudicated prevalence estimates. Second, the completed chunked seed-802 replication should be extended with at least one more seed or model replication if budget allows, because the direction is stable but confidence intervals remain wide. Third, every headline claim should remain traceable to \texttt{paper/tables/headline\_claims.csv}, which records the evaluator, denominator, confidence interval, and adjudication status. Finally, the limitations should remain explicit: the benchmark is synthetic, judge sensitivity varies by model, and verifier shielding uses an LLM judge at inference time rather than proving semantic truthfulness.
 
 \section{Limitations}
 
