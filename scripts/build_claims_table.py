@@ -48,6 +48,8 @@ def rate_row(
 
 
 def deterministic_episode_rows(summary_path: Path) -> list[dict[str, str]]:
+    if not summary_path.exists():
+        return []
     frame = pd.read_csv(summary_path)
     rows = []
     for _, row in frame.iterrows():
@@ -68,6 +70,8 @@ def deterministic_episode_rows(summary_path: Path) -> list[dict[str, str]]:
 
 
 def judge_rows_from_agreement(path: Path, *, claim_family: str, measurement: str, notes: str) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
     frame = pd.read_csv(path)
     row = frame[frame["comparison"] == "deterministic_vs_llm_judge"].iloc[0]
     return [
@@ -84,6 +88,8 @@ def judge_rows_from_agreement(path: Path, *, claim_family: str, measurement: str
 
 
 def source_type_judge_rows(sample_path: Path, predictions_path: Path, source_type: str) -> list[dict[str, str]]:
+    if not sample_path.exists() or not predictions_path.exists():
+        return []
     sample = pd.read_csv(sample_path).fillna("")
     predictions = pd.read_csv(predictions_path).fillna("")
     merged = sample.merge(
@@ -121,6 +127,8 @@ def source_type_judge_rows(sample_path: Path, predictions_path: Path, source_typ
 
 
 def pending_human_rows(sample_path: Path, predictions_path: Path, *, source_name: str) -> list[dict[str, str]]:
+    if not sample_path.exists() or not predictions_path.exists():
+        return []
     sample = pd.read_csv(sample_path).fillna("")
     predictions = pd.read_csv(predictions_path).fillna("")
     merged = sample.merge(predictions[["audit_id", "llm_judge_violation"]], on="audit_id", how="left")
@@ -148,6 +156,7 @@ def main() -> int:
 
     rows: list[dict[str, str]] = []
     rows.extend(deterministic_episode_rows(Path("paper/tables/blindspot_stress_bon_summary.csv")))
+    rows.extend(deterministic_episode_rows(Path("paper/tables/blindspot_verified_shield_summary.csv")))
     rows.extend(
         judge_rows_from_agreement(
             Path("paper/tables/blindspot_stress_bon_audit_agreement_judge_gpt41.csv"),
@@ -175,6 +184,21 @@ def main() -> int:
         source_type_judge_rows(
             Path("data/audit/blindspot_stress_bon_transcript_audit_sample.csv"),
             Path("data/audit/blindspot_stress_bon_transcript_audit_predictions_judge_gpt41.csv"),
+            "transcript",
+        )
+    )
+    rows.extend(
+        judge_rows_from_agreement(
+            Path("paper/tables/blindspot_verified_shield_transcript_audit_agreement_judge_gpt41.csv"),
+            claim_family="verifier_shield_transcript_rates",
+            measurement="verified_shield_transcript_rows",
+            notes="GPT-4.1 judge over transcript rows from the fact-grounded verifier-shield blindspot run.",
+        )
+    )
+    rows.extend(
+        source_type_judge_rows(
+            Path("data/audit/blindspot_verified_shield_transcript_audit_sample.csv"),
+            Path("data/audit/blindspot_verified_shield_transcript_audit_predictions_judge_gpt41.csv"),
             "transcript",
         )
     )
