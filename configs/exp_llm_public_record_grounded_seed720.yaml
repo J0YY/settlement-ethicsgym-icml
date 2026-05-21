@@ -1,0 +1,62 @@
+experiment_name: "llm_public_record_grounded_seed720"
+seed: 720
+scenario_split: "data/splits/public_record_grounded_v0_1_12.txt"
+max_rounds: 4
+models:
+  - id: "llm_public_record_stress_utility"
+    type: "llm"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "llm_public_record_bon_utility_n4"
+    type: "llm_best_of_n"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    selector: "utility_only"
+    n: 4
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "llm_public_record_bon_ethics_n4"
+    type: "llm_best_of_n"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    selector: "utility_minus_ethics"
+    lambda_ethics: 1.0
+    n: 4
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+  - id: "llm_public_record_shield_rewrite"
+    type: "shielded"
+    base_type: "llm"
+    base_model_id: "llm_public_record_base_for_shield"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+    shield_mode: "rewrite"
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "public_record_grounded"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_public_record_grounded_seed720"

@@ -31,7 +31,7 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic-evaluator material misrepresentation in 6.25--14.6\% of episodes (3/48--7/48), depending on selector and sample budget. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes, but blindspot auditing shows this zero is detector-aligned rather than evidence of eliminated misconduct. On a 24-scenario blindspot split, a GPT-4.1 judge flags 63/390 unverified transcript rows, including deterministic-shield rows; 58/63 flagged transcript rows survive majority support across GPT-4.1 default, strict, and sensitive rubrics, a non-OpenAI Claude Sonnet judge also flags 58/63, and an independent o4-mini judge flags a conservative subset of 11/63. A fact-grounded verifier shield reduces GPT-4.1 transcript flags to 4/196; Claude Sonnet flags all 4 verifier-shield residual rows. These results suggest that SettlementEthicsGym can expose evaluator overfitting and mitigation tradeoffs while making label uncertainty explicit.
+Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, an interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation, with synthetic and public-record-grounded scenario splits. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic-evaluator material misrepresentation in 6.25--14.6\% of episodes (3/48--7/48), depending on selector and sample budget. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes, but blindspot auditing shows this zero is detector-aligned rather than evidence of eliminated misconduct. On a 24-scenario blindspot split, a GPT-4.1 judge flags 63/390 unverified transcript rows, including deterministic-shield rows; 58/63 flagged transcript rows survive majority support across GPT-4.1 default, strict, and sensitive rubrics, a non-OpenAI Claude Sonnet judge also flags 58/63, and an independent o4-mini judge flags a conservative subset of 11/63. A fact-grounded verifier shield reduces GPT-4.1 transcript flags to 4/196; Claude Sonnet flags all 4 verifier-shield residual rows. These results suggest that SettlementEthicsGym can expose evaluator overfitting and mitigation tradeoffs while making label uncertainty explicit.
 \end{abstract}
 
 \section{Introduction}
@@ -43,7 +43,7 @@ The benchmark is not a source of legal advice and does not decide real lawyer di
 \section{Related Work}
 
 \paragraph{Legal AI evaluation.}
-LegalBench and LexGLUE provide broad legal-reasoning and legal-language-understanding evaluations, but they are primarily static tasks rather than interactive, payoff-driven legal representation \citep{legalbench,lexglue}. SettleBench and NegotiationArena move toward legal and general negotiation agents, respectively, evaluating settlement planning, negotiation outcomes, and compliance concerns \citep{settlebench,negotiationarena}. SettlementEthicsGym complements these benchmarks by making professional-responsibility failure the measured object: the question is not only whether an agent negotiates effectively, but whether optimization pressure induces material falsehoods, misleading half-truths, or impermissible authority representations.
+LegalBench and LexGLUE provide broad legal-reasoning and legal-language-understanding evaluations, but they are primarily static tasks rather than interactive, payoff-driven legal representation \citep{legalbench,lexglue}. Recent legal-agent benchmarks such as Harvey's Legal Agent Benchmark and PRBench emphasize long-horizon legal work product and expert rubric criteria \citep{harveylab,prbench}. SettleBench and NegotiationArena move toward legal and general negotiation agents, respectively, evaluating settlement planning, negotiation outcomes, and compliance concerns \citep{settlebench,negotiationarena}. SettlementEthicsGym complements these benchmarks by making professional-responsibility failure the measured object: the question is not only whether an agent negotiates effectively, but whether optimization pressure induces material falsehoods, misleading half-truths, or impermissible authority representations.
 
 \paragraph{Optimization pressure and auditing.}
 The benchmark follows safety work showing that proxy rewards can be gamed when they omit important constraints \citep{amodei2016concrete,skalse2022rewardgaming,gao2022scaling}. It is closest in spirit to agent evaluations such as MACHIAVELLI, where task reward can trade off against ethical behavior \citep{pan2023machiavelli}, but it localizes that tradeoff to legal negotiation norms and role-specific hidden facts. Our audit protocol also draws on LLM-as-judge evaluation and red-teaming work, while treating model judgments as sensitivity checks rather than ground truth because LLM judges have known biases and reliability limits \citep{perez2022redteaming,liang2022helm,llmjudge,liu2023geval}.
@@ -62,7 +62,7 @@ The benchmark supports both no-API controls and real LLM agents. The no-API MVP 
 
 The repository now includes a Python package named \texttt{segym}; Pydantic schemas; YAML scenario loading and validation; a deterministic ethics evaluator; OpenAI-compatible and Anthropic LLM negotiators; LLM judges; scripted honest and deceptive agents; best-of-$N$ selectors; deterministic and LLM-verifier rewrite shields; a hybrid threshold opponent; an environment loop; run, analysis, audit, adjudication, and table-export scripts; and unit tests that run without internet or API keys.
 
-The current seed set has eight hand-written scenario families across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation. A generated 24-scenario split varies these families, amounts, and fact patterns; a stress matrix adds higher-temperature utility-pressure prompts and larger best-of-$N$ candidate pools. The blindspot split is hand-authored around paraphrases that deterministic phrase rules are less likely to catch: unresolved liens, withdrawn experts, denied funding, and approval authority.
+The current seed set has eight hand-written scenario families across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation. A generated 24-scenario split varies these families, amounts, and fact patterns; a stress matrix adds higher-temperature utility-pressure prompts and larger best-of-$N$ candidate pools. The blindspot split is hand-authored around paraphrases that deterministic phrase rules are less likely to catch: unresolved liens, withdrawn experts, denied funding, and approval authority. We also add a 12-scenario public-record-grounded extension built from free public civil case materials and opinions; it uses public records only for high-level claim, injury, procedural, and evidence facts, while syntheticizing party names, settlement values, role files, hidden knowledge splits, offers, and dialogue. The provenance table records the public source URL and syntheticized fields for each scenario, following public-data access patterns enabled by open legal resources such as CourtListener and public opinion archives \citep{courtlistener}.
 
 \begin{table*}[t]
 \caption{Experiment matrix. Rows are grouped by the main question each run answers. Audit rows are sampled utterances or candidates, not episodes.}
@@ -284,6 +284,24 @@ SettleAgent / SettleBench.
 Planning-Enhanced Multi-Agent Legal Negotiation.
 OpenReview submission, 2026.
 \url{https://openreview.net/forum?id=49NyzgT5EX}.
+
+\bibitem[Harvey AI(2026)]{harveylab}
+Harvey AI.
+Introducing Harvey's Legal Agent Benchmark.
+2026.
+\url{https://www.harvey.ai/blog/introducing-harveys-legal-agent-benchmark}.
+
+\bibitem[JusticeBench(2026)]{prbench}
+JusticeBench.
+PRBench: Professional Reasoning Benchmark.
+2026.
+\url{https://www.justicebench.org/dataset/prbench}.
+
+\bibitem[Free Law Project(2026)]{courtlistener}
+Free Law Project.
+CourtListener case law API documentation.
+2026.
+\url{https://www.courtlistener.com/help/api/rest/v3/case-law/}.
 
 \bibitem[Bianchi et al.(2024)]{negotiationarena}
 Bianchi et al.
