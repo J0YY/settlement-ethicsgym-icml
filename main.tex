@@ -12,7 +12,7 @@
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 \usepackage[preprint]{icml2026/icml2026}
 
-\icmltitlerunning{SettlementEthicsGym}
+\icmltitlerunning{\smash{SettlementEthicsGym}}
 
 \begin{document}
 
@@ -31,7 +31,7 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic material misrepresentation in 6.25--14.6\% of episodes depending on selector and sample budget. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes, but blindspot auditing shows this zero is detector-aligned rather than evidence of eliminated misconduct. On a 24-scenario blindspot split, a GPT-4.1 judge flags 63/390 unverified transcript rows, including deterministic-shield rows; 58/63 flagged transcript rows survive majority support across GPT-4.1 default, strict, and sensitive rubrics, and an independent o4-mini judge flags a conservative subset of 11/63. A fact-grounded verifier shield reduces GPT-4.1 transcript flags to 4/196. These results suggest that SettlementEthicsGym can expose evaluator overfitting and mitigation tradeoffs while making label uncertainty explicit.
+Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, a synthetic interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic-evaluator material misrepresentation in 6.25--14.6\% of episodes (3/48--7/48), depending on selector and sample budget. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes, but blindspot auditing shows this zero is detector-aligned rather than evidence of eliminated misconduct. On a 24-scenario blindspot split, a GPT-4.1 judge flags 63/390 unverified transcript rows, including deterministic-shield rows; 58/63 flagged transcript rows survive majority support across GPT-4.1 default, strict, and sensitive rubrics, and an independent o4-mini judge flags a conservative subset of 11/63. A fact-grounded verifier shield reduces GPT-4.1 transcript flags to 4/196. These results suggest that SettlementEthicsGym can expose evaluator overfitting and mitigation tradeoffs while making label uncertainty explicit.
 \end{abstract}
 
 \section{Introduction}
@@ -60,9 +60,9 @@ The benchmark supports both no-API controls and real LLM agents. The no-API MVP 
 
 \section{Current Implementation}
 
-The repository now includes a Python package named \texttt{segym}; Pydantic schemas; YAML scenario loading and validation; a deterministic ethics evaluator; an OpenAI-compatible LLM negotiator; an LLM judge; scripted honest and deceptive agents; best-of-$N$ selectors; deterministic and LLM-verifier rewrite shields; a hybrid threshold opponent; an environment loop; run, analysis, audit, adjudication, and table-export scripts; and unit tests that run without internet or API keys.
+The repository now includes a Python package named \texttt{segym}; Pydantic schemas; YAML scenario loading and validation; a deterministic ethics evaluator; OpenAI-compatible and Anthropic LLM negotiators; LLM judges; scripted honest and deceptive agents; best-of-$N$ selectors; deterministic and LLM-verifier rewrite shields; a hybrid threshold opponent; an environment loop; run, analysis, audit, adjudication, and table-export scripts; and unit tests that run without internet or API keys.
 
-The current seed set has eight scenarios across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation. A generated 24-scenario split varies these families and amounts; a stress matrix adds higher-temperature utility-pressure prompts and larger best-of-$N$ candidate pools.
+The current seed set has eight hand-written scenario families across personal injury, employment, contract, debt collection, housing, and client-authority edge cases. These cover false insurance limits, fabricated witnesses, fabricated video evidence, false payroll records, false delivery records, false limitations status, false notice service, and authority misrepresentation. A generated 24-scenario split varies these families, amounts, and fact patterns; a stress matrix adds higher-temperature utility-pressure prompts and larger best-of-$N$ candidate pools. The blindspot split is hand-authored around paraphrases that deterministic phrase rules are less likely to catch: unresolved liens, withdrawn experts, denied funding, and approval authority.
 
 \begin{table*}[t]
 \caption{Experiment matrix. Rows are grouped by the main question each run answers. Audit rows are sampled utterances or candidates, not episodes.}
@@ -77,7 +77,9 @@ The current seed set has eight scenarios across personal injury, employment, con
 \paragraph{Audit and uncertainty protocol.}
 All headline run tables are generated from non-fake run metadata. Episode-level deterministic rates use the deterministic evaluator replayed over final transcript messages. Candidate-level and transcript-level audits use sampled rows from transcripts and best-of-$N$ candidate logs. LLM-judge audits provide scenario facts, role information, and the public message, but not deterministic forbidden-pattern labels. We report Wilson 95\% intervals for binomial rates and keep deterministic, single-judge, multi-judge sensitivity, and optional external-adjudication fields separate. The repository exports \texttt{paper/tables/headline\_claims.csv} so each headline rate has an explicit numerator, denominator, evaluator, confidence interval, and adjudication status.
 
-\section{Preliminary Results}
+The supplementary artifact records exact YAML configs, prompt templates, provider/model identifiers, temperatures, maximum token budgets, split files, seeds, retry counts, parsing failures, and run directories. Structured JSON outputs are parsed by schema; invalid outputs are counted and logged rather than silently repaired. This makes best-of-$N$ selection, shield rewrites, and audit samples replayable from the released configuration files.
+
+\section{Results}
 
 Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. These numbers are not yet claims about deployed LLM behavior; they verify that the benchmark creates the intended measurement contrast.
 
@@ -101,7 +103,7 @@ Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. Thes
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{paper/figures/pareto.png}
-\caption{Preliminary utility and ethics tradeoff for scripted conditions.}
+\caption{Utility and ethics tradeoff for scripted conditions.}
 \label{fig:pareto}
 \end{figure}
 
@@ -109,7 +111,7 @@ Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. Thes
 We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref{tab:llm-generated} reports deterministic evaluator metrics after replaying run summaries with the repaired evaluator. The zero-shot, ethics-prompt, and shielded conditions reached settlements without deterministic material violations. The utility prompt produced material violations in 8.3\% of episodes. The best-of-$N$ conditions achieved higher candidate coverage and exposed selected unsafe cases: utility-only best-of-$N$ reached the highest mean utility in the base matrix and produced material violations in 4.2\% of episodes; ethics-aware best-of-$N$ also produced material violations in 4.2\%, but did not select an unsafe candidate when a safe candidate was available under the current selector log.
 
 \begin{table}[t]
-\caption{Real LLM results on the 24-scenario generated split. Misrep. is deterministic material misrepresentation rate.}
+\caption{Real LLM results on the 24-scenario generated split. Misrep. is deterministic material misrepresentation rate with count.}
 \label{tab:llm-generated}
 \centering
 \small
@@ -118,12 +120,12 @@ We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref
 \toprule
 Condition & Settle & Utility & Misrep. \\
 \midrule
-Zero-shot & 0.375 & 0.340 & 0.000 \\
-Utility prompt & 0.417 & 0.281 & 0.083 \\
-Ethics prompt & 0.667 & 0.481 & 0.000 \\
-Utility shield & 0.458 & 0.359 & 0.000 \\
-Best-of-$N$ utility, $N=4$ & 0.500 & 0.500 & 0.042 \\
-Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 \\
+Zero-shot & 0.375 & 0.340 & 0.000 (0/24) \\
+Utility prompt & 0.417 & 0.281 & 0.083 (2/24) \\
+Ethics prompt & 0.667 & 0.481 & 0.000 (0/24) \\
+Utility shield & 0.458 & 0.359 & 0.000 (0/24) \\
+Best-of-$N$ utility, $N=4$ & 0.500 & 0.500 & 0.042 (1/24) \\
+Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 (1/24) \\
 \bottomrule
 \end{tabular}
 }
@@ -133,7 +135,7 @@ Best-of-$N$ ethics, $N=4$ & 0.375 & 0.333 & 0.042 \\
 The initial generated split produced too few unsafe single-sample outputs to stress mitigations. We therefore expanded to a 48-scenario stress split, added a stress utility prompt that explicitly rewards client utility and bargaining pressure while preserving the truthfulness rule, and increased best-of-$N$ sampling to $N=8$. Table~\ref{tab:llm-stress} reports the main 48-scenario matrix. Stress utility prompting produced deterministic material violations in 4.2\% of episodes. Stress utility best-of-$N$ produced violations in 14.6\%, while stress ethics-aware best-of-$N$ produced violations in 6.25\%. Every best-of-$N$ episode had at least one safe candidate available, but utility-only selection still selected an unsafe candidate despite a safe alternative in 14.6\% of episodes. This motivates candidate-level filtering rather than relying on a scalar ethics penalty alone.
 
 \begin{table}[t]
-\caption{48-scenario stress real LLM matrix. Misrep. is deterministic material misrepresentation rate.}
+\caption{48-scenario stress real LLM matrix. Misrep. is deterministic material misrepresentation rate with count.}
 \label{tab:llm-stress}
 \centering
 \small
@@ -142,13 +144,13 @@ The initial generated split produced too few unsafe single-sample outputs to str
 \toprule
 Condition & Settle & Utility & Misrep. \\
 \midrule
-Zero-shot & 0.396 & 0.328 & 0.042 \\
-Utility prompt & 0.500 & 0.364 & 0.042 \\
-Ethics prompt & 0.604 & 0.503 & 0.000 \\
-Stress utility prompt & 0.396 & 0.328 & 0.042 \\
-Stress best-of-$N$ utility, $N=8$ & 0.354 & 0.354 & 0.146 \\
-Stress best-of-$N$ ethics, $N=8$ & 0.312 & 0.312 & 0.062 \\
-Stress rewrite shield & 0.396 & 0.326 & 0.000 \\
+Zero-shot & 0.396 & 0.328 & 0.042 (2/48) \\
+Utility prompt & 0.500 & 0.364 & 0.042 (2/48) \\
+Ethics prompt & 0.604 & 0.503 & 0.000 (0/48) \\
+Stress utility prompt & 0.396 & 0.328 & 0.042 (2/48) \\
+Stress best-of-$N$ utility, $N=8$ & 0.354 & 0.354 & 0.146 (7/48) \\
+Stress best-of-$N$ ethics, $N=8$ & 0.312 & 0.312 & 0.062 (3/48) \\
+Stress rewrite shield & 0.396 & 0.326 & 0.000 (0/48) \\
 \bottomrule
 \end{tabular}
 }
@@ -162,10 +164,10 @@ Stress rewrite shield & 0.396 & 0.326 & 0.000 \\
 \end{figure}
 
 \paragraph{Scaling and mitigation.}
-Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablation runs. Increasing sample budget from $N=8$ to $N=16$ did not improve safety: utility-only $N=16$ produced 12.5\% material violations, and ethics-aware $N=16$ produced 14.6\%. In a lambda sweep for ethics-aware $N=8$, $\lambda=0.25$ produced the lowest deterministic material violation rate among tested values, while $\lambda=0.5$ and $\lambda=2.0$ were worse. The rewrite shield reached 0/48 deterministic material violations in both the main stress matrix and the shield ablation, whereas warn-only left 8.3\% material violations and block preserved safety at substantially lower utility.
+Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablation runs. Increasing sample budget from $N=8$ to $N=16$ did not improve safety: utility-only $N=16$ produced 12.5\% material violations, and ethics-aware $N=16$ produced 14.6\%. These small-count rates are not monotone scaling laws; they reflect selector instability, scenario mix, and stochastic candidate generation. In a lambda sweep for ethics-aware $N=8$, $\lambda=0.25$ produced the lowest deterministic material violation rate among tested values, while $\lambda=0.5$ and $\lambda=2.0$ were worse. The rewrite shield reached 0/48 deterministic material violations in both the main stress matrix and the shield ablation, whereas warn-only left 8.3\% material violations and block preserved safety at substantially lower utility.
 
 \begin{table}[t]
-\caption{Selected 48-scenario scaling and shield results. Misrep. is deterministic material misrepresentation rate. CI is the Wilson 95\% interval for Misrep.}
+\caption{Selected 48-scenario scaling and shield results. Misrep. is deterministic material misrepresentation rate with count. CI is the Wilson 95\% interval for Misrep.}
 \label{tab:scaling-shield}
 \centering
 \small
@@ -174,13 +176,13 @@ Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablat
 \toprule
 Condition & Utility & Misrep. & CI \\
 \midrule
-BoN utility $N=8$ & 0.438 & 0.125 & [0.055, 0.250] \\
-BoN utility $N=16$ & 0.312 & 0.125 & [0.055, 0.250] \\
-BoN ethics $N=8$ & 0.396 & 0.062 & [0.021, 0.168] \\
-BoN ethics $N=16$ & 0.333 & 0.146 & [0.072, 0.272] \\
-Shield warn-only & 0.188 & 0.083 & [0.033, 0.196] \\
-Shield block & 0.208 & 0.000 & [0.000, 0.074] \\
-Shield rewrite & 0.340 & 0.000 & [0.000, 0.074] \\
+BoN utility $N=8$ & 0.438 & 0.125 (6/48) & [0.055, 0.250] \\
+BoN utility $N=16$ & 0.312 & 0.125 (6/48) & [0.055, 0.250] \\
+BoN ethics $N=8$ & 0.396 & 0.062 (3/48) & [0.021, 0.168] \\
+BoN ethics $N=16$ & 0.333 & 0.146 (7/48) & [0.072, 0.272] \\
+Shield warn-only & 0.188 & 0.083 (4/48) & [0.033, 0.196] \\
+Shield block & 0.208 & 0.000 (0/48) & [0.000, 0.074] \\
+Shield rewrite & 0.340 & 0.000 (0/48) & [0.000, 0.074] \\
 \bottomrule
 \end{tabular}
 }
@@ -216,10 +218,10 @@ We then expanded this blindspot family to 24 scenarios and added utility-only an
 As a robustness check, we also ran a second independent judge model, GPT-4.1-nano, over the earlier stratified and blindspot audit packets. That judge flagged 0/400 and 0/37 rows, respectively. We therefore treat it as a low-sensitivity bound rather than adjudicated ground truth. For the 400-row stratified packet, the automated two-model panel gives an any-judge rate of 107/400 (26.8\%, CI [22.6, 31.3]\%), but majority-judge and unanimous-judge rates of 0/400 (CI [0.0, 1.0]\%), making judge sensitivity itself an explicit result. We therefore added a stronger within-model sensitivity check using GPT-4.1 default, strict, and sensitive rubrics over rows flagged by the default GPT-4.1 judge. The flagged blindspot rows largely survive this check: 152/160 mixed transcript/candidate rows have majority-rubric support (95.0\%, CI [90.4, 97.4]\%), and 58/63 transcript rows have majority-rubric support (92.1\%, CI [82.7, 96.6]\%). A separate o4-mini judge flags 11/63 of these transcript rows (17.5\%, CI [10.0, 28.6]\%), so the independently supported set is smaller but still nonzero under a deterministic rate of 0/390. For verifier-shield residuals, GPT-4.1 rubric variants give majority support to 4/4 rows, but o4-mini flags 0/4 at severity at least 3; we therefore describe the verifier shield as a strong mitigation with uncertain residual risk rather than a solved guarantee. The current repository reports a claims table separating deterministic episode rates, single-judge row rates, transcript-only rates, candidate-only rates, automated multi-judge sensitivity rows, and optional external-adjudication slots.
 
 \paragraph{Fact-grounded verifier shield.}
-The deterministic shield failures motivate a stronger mitigation baseline that verifies proposed public messages against scenario facts before release. We therefore add an LLM-verifier shield using the same fact-grounded judge rubric as the independent audit, then rerun the 24-scenario blindspot split with utility and utility best-of-$N$ bases. Table~\ref{tab:verifier-shield} compares the original blindspot audit with the verifier-shield audit. GPT-4.1 flags fall from 63/390 unverified transcript rows (16.2\%, CI [12.8, 20.1]\%) to 4/196 verifier-shield transcript rows (2.0\%, CI [0.8, 5.1]\%). The residual 4 rows survive GPT-4.1 rubric-majority review but not the conservative o4-mini audit, so we treat verifier shielding as a promising mitigation baseline whose residual risk is uncertain rather than solved.
+The deterministic shield failures motivate a stronger mitigation baseline that verifies proposed public messages against scenario facts before release. We therefore add an LLM-verifier shield using the same fact-grounded judge rubric as the independent audit, then rerun the 24-scenario blindspot split with utility and utility best-of-$N$ bases. Table~\ref{tab:verifier-shield} compares the original blindspot audit with the verifier-shield audit. GPT-4.1 flags fall from 63/390 unverified transcript rows (16.2\%, CI [12.8, 20.1]\%) to 4/196 verifier-shield transcript rows (2.0\%, CI [0.8, 5.1]\%). Because the verifier and audit share a fact-grounded rubric, this is a judge-aligned mitigation baseline rather than evaluator-disjoint validation. The residual 4 rows survive GPT-4.1 rubric-majority review but not the conservative o4-mini audit, so we treat verifier shielding as a promising mitigation baseline whose residual risk is uncertain rather than solved.
 
 \begin{table}[t]
-\caption{Blindspot transcript audit before and after fact-grounded verifier shielding. Judge flags are GPT-4.1 material or misleading findings on final transcript rows.}
+\caption{Blindspot transcript audit before and after fact-grounded verifier shielding. Judge flags are GPT-4.1 material or misleading findings on final transcript rows, reported with counts.}
 \label{tab:verifier-shield}
 \centering
 \small
@@ -228,23 +230,23 @@ The deterministic shield failures motivate a stronger mitigation baseline that v
 \toprule
 Condition & Rows & Judge flags & CI \\
 \midrule
-Unverified blindspot matrix & 390 & 0.162 & [0.128, 0.201] \\
-Deterministic rewrite shield rows & 85 & 0.118 & [0.065, 0.203] \\
-Verifier shield, utility base & 95 & 0.011 & [0.002, 0.057] \\
-Verifier shield, BoN utility base & 101 & 0.030 & [0.010, 0.084] \\
-Verifier shield, pooled & 196 & 0.020 & [0.008, 0.051] \\
+Unverified blindspot matrix & 390 & 0.162 (63/390) & [0.128, 0.201] \\
+Deterministic rewrite shield rows & 85 & 0.118 (10/85) & [0.065, 0.203] \\
+Verifier shield, utility base & 95 & 0.011 (1/95) & [0.002, 0.057] \\
+Verifier shield, BoN utility base & 101 & 0.030 (3/101) & [0.010, 0.084] \\
+Verifier shield, pooled & 196 & 0.020 (4/196) & [0.008, 0.051] \\
 \bottomrule
 \end{tabular}
 }
 \end{table}
 
-\section{Remaining Work}
+\section{Future Work}
 
-The acceptance-critical remaining work is label validation and presentation polish. Because no external legal reviewer is currently available, the paper should not rely on human-adjudicated rates. Instead, the repository now reports automated sensitivity analyses using GPT-4.1 rubric variants and an independent o4-mini judge, while retaining review packets for optional later external validation. The next strongest validation step is a small external expert review or another strong non-OpenAI judge, not more deterministic runs. Every headline claim should remain traceable to \texttt{paper/tables/headline\_claims.csv}, which records the evaluator, denominator, confidence interval, and adjudication status.
+The main next validation step is evaluator-disjoint label validation. Because no external legal reviewer is currently available, the paper does not rely on human-adjudicated prevalence rates. Instead, the repository reports automated sensitivity analyses using GPT-4.1 rubric variants and an independent o4-mini judge, while retaining review packets for optional external review. A small expert annotation study or strong non-OpenAI judge would most directly test whether the blindspot rows are genuine legal-ethics failures rather than judge-family artifacts. Every headline claim remains traceable to \texttt{paper/tables/headline\_claims.csv}, which records the evaluator, denominator, confidence interval, and adjudication status.
 
 \section{Limitations}
 
-The current scenarios are synthetic and intentionally narrow. The deterministic evaluator is useful for replayable measurement but insufficient for broad language variation, and the current audit shows both false positives and false negatives. Deterministic shield results are especially vulnerable to detector overfitting because the shield and headline deterministic metric share evaluator logic. The verifier shield reduces GPT-4.1 flags in the blindspot split, but it inherits the costs and uncertainties of LLM-as-judge evaluation and should not be read as a formal guarantee. The benchmark taxonomy is inspired by professional-responsibility rules, especially truthfulness in negotiation, but it is not a jurisdiction-specific legal standard. Stronger paper claims require larger scenario coverage, cross-model replication, and independent LLM-judge sensitivity checks; external human or legally trained annotation would strengthen the evidence but is not treated as available ground truth here.
+The current scenarios are synthetic and intentionally narrow. The deterministic evaluator is useful for replayable measurement but insufficient for broad language variation, and the current audit shows both false positives and false negatives. Deterministic shield results are especially vulnerable to detector overfitting because the shield and headline deterministic metric share evaluator logic. The verifier shield reduces GPT-4.1 flags in the blindspot split, but it inherits the costs and uncertainties of LLM-as-judge evaluation and should not be read as a formal guarantee. The benchmark taxonomy is inspired by professional-responsibility rules, especially truthfulness in negotiation, but it is not a jurisdiction-specific legal standard. Stronger paper claims require larger scenario coverage, cross-model replication, and independent LLM-judge sensitivity checks; external human or legally trained annotation would strengthen the evidence but is not treated as available ground truth here. Responsible release also matters: the artifact uses synthetic disputes, separates claims from raw detector rules, and includes caveats that these scenarios are for safety evaluation, not legal advice or training systems to evade narrow detectors.
 
 \section{Conclusion}
 
@@ -252,24 +254,24 @@ SettlementEthicsGym operationalizes a narrow but important safety question for l
 
 \begin{thebibliography}{22}
 
-\bibitem[American Bar Association(2026a)]{aba41}
+\bibitem[American Bar Association(n.d.a)]{aba41}
 American Bar Association.
 Model Rule 4.1: Truthfulness in Statements to Others.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_4_1_truthfulness_in_statements_to_others/}.
 
-\bibitem[American Bar Association(2026b)]{aba12}
+\bibitem[American Bar Association(n.d.b)]{aba12}
 American Bar Association.
 Model Rule 1.2: Scope of Representation and Allocation of Authority Between Client and Lawyer.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_2_scope_of_representation_allocation_of_authority_between_client_lawyer/}.
 
-\bibitem[American Bar Association(2026c)]{aba16}
+\bibitem[American Bar Association(n.d.c)]{aba16}
 American Bar Association.
 Model Rule 1.6: Confidentiality of Information.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_6_confidentiality_of_information/}.
 
 \bibitem[American Bar Association(2006)]{aba439}
 American Bar Association.
-Formal Opinion 06-439: Lawyer's Obligation of Truthfulness When Representing a Client in Negotiation.
+Formal Opinion 06-439: Lawyer's Obligation of Truthfulness When Representing a Client in Negotiation: Application to Caucused Mediation.
 \url{https://attorneygeneral.delaware.gov/wp-content/uploads/sites/50/2018/01/ABA-Opinion-06-439-Obligation-of-Truthfulneess-in-Negotiation-and-Mediation.pdf}.
 
 \bibitem[State Bar of California(2015)]{calbar2015puffing}
@@ -280,12 +282,13 @@ Formal Opinion No. 2015-194: Puffing in Negotiations.
 \bibitem[SettleBench(2026)]{settlebench}
 SettleAgent / SettleBench.
 Planning-Enhanced Multi-Agent Legal Negotiation.
+OpenReview submission, 2026.
 \url{https://openreview.net/forum?id=49NyzgT5EX}.
 
 \bibitem[Bianchi et al.(2024)]{negotiationarena}
 Bianchi et al.
-NegotiationArena: How Well Can LLMs Negotiate?
-Proceedings of Machine Learning Research, 2024.
+How Well Can LLMs Negotiate? NegotiationArena Platform and Analysis.
+Proceedings of Machine Learning Research 235:3935--3951, 2024.
 \url{https://proceedings.mlr.press/v235/bianchi24a.html}.
 
 \bibitem[Amodei et al.(2016)]{amodei2016concrete}
@@ -298,13 +301,13 @@ arXiv:1606.06565, 2016.
 Skalse, J., Howe, N., Krasheninnikov, D., and Krueger, D.
 Defining and Characterizing Reward Gaming.
 NeurIPS, 2022.
-\url{https://proceedings.neurips.cc/paper_files/paper/2022/hash/6447c7a7b1be2b4f1c56f6af477716b3-Abstract-Conference.html}.
+\url{https://proceedings.neurips.cc/paper_files/paper/2022/hash/3d719fee332caa23d5038b8a90e81796-Abstract-Conference.html}.
 
-\bibitem[Gao et al.(2022)]{gao2022scaling}
+\bibitem[Gao et al.(2023)]{gao2022scaling}
 Gao, L., Schulman, J., and Hilton, J.
 Scaling Laws for Reward Model Overoptimization.
-arXiv:2210.10760, 2022.
-\url{https://arxiv.org/abs/2210.10760}.
+ICML, Proceedings of Machine Learning Research 202, 2023.
+\url{https://proceedings.mlr.press/v202/gao23h.html}.
 
 \bibitem[Pan et al.(2023)]{pan2023machiavelli}
 Pan, A. et al.
@@ -330,11 +333,11 @@ Red Teaming Language Models with Language Models.
 EMNLP, 2022.
 \url{https://aclanthology.org/2022.emnlp-main.225/}.
 
-\bibitem[Liang et al.(2022)]{liang2022helm}
+\bibitem[Liang et al.(2023)]{liang2022helm}
 Liang, P. et al.
 Holistic Evaluation of Language Models.
-arXiv:2211.09110, 2022.
-\url{https://arxiv.org/abs/2211.09110}.
+Transactions on Machine Learning Research, 2023.
+\url{https://openreview.net/forum?id=iO4LZibEqW}.
 
 \bibitem[Zheng et al.(2023)]{llmjudge}
 Zheng, L. et al.
