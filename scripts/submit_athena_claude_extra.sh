@@ -56,11 +56,7 @@ run_with_retry() {
   return 1
 }
 
-run_with_retry ${job_name} python scripts/run_experiment.py \\
-  --config ${config} \\
-  --scenario-split ${split} \\
-  --output-dir ${output_dir} \\
-  --seed ${seed}
+run_with_retry ${job_name} python scripts/run_experiment.py --config ${config} --scenario-split ${split} --output-dir ${output_dir} --seed ${seed}
 SBATCH
 }
 

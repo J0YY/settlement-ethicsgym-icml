@@ -96,11 +96,7 @@ run_with_retry() {
   return 1
 }
 
-run_with_retry claude-c${chunk} python scripts/run_experiment.py \\
-  --config configs/exp_llm_stress_core_replication_claude_sonnet_seed901.yaml \\
-  --scenario-split data/splits/generated_stress_v0_2_48_chunk${chunk}.txt \\
-  --output-dir runs/overnight_stress_core_claude_sonnet_seed901_chunk${chunk} \\
-  --seed 901
+run_with_retry claude-c${chunk} python scripts/run_experiment.py --config configs/exp_llm_stress_core_replication_claude_sonnet_seed901.yaml --scenario-split data/splits/generated_stress_v0_2_48_chunk${chunk}.txt --output-dir runs/overnight_stress_core_claude_sonnet_seed901_chunk${chunk} --seed 901
 SBATCH
 )")
 done
