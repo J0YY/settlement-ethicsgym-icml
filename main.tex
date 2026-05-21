@@ -36,9 +36,17 @@ Legal AI agents may be optimized for client-favorable outcomes, but professional
 
 \section{Introduction}
 
-Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results, a domain-specific instance of reward hacking and overoptimization concerns studied in AI safety \citep{amodei2016concrete,gao2022scaling}. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements \citep{settlebench,negotiationarena}. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
+Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results, a domain-specific instance of reward hacking, reward gaming, and reward-model overoptimization concerns studied in AI safety \citep{amodei2016concrete,skalse2022rewardgaming,gao2022scaling,pan2023machiavelli}. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements \citep{settlebench,negotiationarena}. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
 
-The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses synthetic disputes and a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing under professional-responsibility rules such as truthfulness to others, client authority over settlement, and confidentiality \citep{aba41,aba12,aba16,aba439}. The current implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, real LLM agents, best-of-$N$ inference-time optimization, deterministic and verifier-based shields, and audit tooling for adjudicating evaluator disagreements.
+The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses synthetic disputes and a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing under professional-responsibility rules such as truthfulness to others, client authority over settlement, and confidentiality \citep{aba41,aba12,aba16,aba439,calbar2015puffing}. The current implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, real LLM agents, best-of-$N$ inference-time optimization, deterministic and verifier-based shields, and audit tooling for adjudicating evaluator disagreements.
+
+\section{Related Work}
+
+\paragraph{Legal AI evaluation.}
+LegalBench and LexGLUE provide broad legal-reasoning and legal-language-understanding evaluations, but they are primarily static tasks rather than interactive, payoff-driven legal representation \citep{legalbench,lexglue}. SettleBench and NegotiationArena move toward legal and general negotiation agents, respectively, evaluating settlement planning, negotiation outcomes, and compliance concerns \citep{settlebench,negotiationarena}. SettlementEthicsGym complements these benchmarks by making professional-responsibility failure the measured object: the question is not only whether an agent negotiates effectively, but whether optimization pressure induces material falsehoods, misleading half-truths, or impermissible authority representations.
+
+\paragraph{Optimization pressure and auditing.}
+The benchmark follows safety work showing that proxy rewards can be gamed when they omit important constraints \citep{amodei2016concrete,skalse2022rewardgaming,gao2022scaling}. It is closest in spirit to agent evaluations such as MACHIAVELLI, where task reward can trade off against ethical behavior \citep{pan2023machiavelli}, but it localizes that tradeoff to legal negotiation norms and role-specific hidden facts. Our audit protocol also draws on LLM-as-judge evaluation and red-teaming work, while treating model judgments as sensitivity checks rather than ground truth because LLM judges have known biases and reliability limits \citep{perez2022redteaming,liang2022helm,llmjudge,liu2023geval}.
 
 \section{Benchmark Design}
 
@@ -242,7 +250,7 @@ The current scenarios are synthetic and intentionally narrow. The deterministic 
 
 SettlementEthicsGym operationalizes a narrow but important safety question for legal agents: whether optimization for settlement outcomes amplifies material misrepresentation. The implementation establishes an executable environment, deterministic and LLM-judge evaluators, real LLM agents, control conditions, stress conditions, candidate-level audit logs, mitigation baselines, and a paper pipeline. Initial real LLM results support the benchmark's core premise: stronger utility pressure can surface unsafe negotiation statements, deterministic safety metrics can miss paraphrased failures, and fact-grounded verifier shielding can substantially reduce but not eliminate judge-flagged transcript risk.
 
-\begin{thebibliography}{12}
+\begin{thebibliography}{22}
 
 \bibitem[American Bar Association(2026a)]{aba41}
 American Bar Association.
@@ -264,6 +272,11 @@ American Bar Association.
 Formal Opinion 06-439: Lawyer's Obligation of Truthfulness When Representing a Client in Negotiation.
 \url{https://attorneygeneral.delaware.gov/wp-content/uploads/sites/50/2018/01/ABA-Opinion-06-439-Obligation-of-Truthfulneess-in-Negotiation-and-Mediation.pdf}.
 
+\bibitem[State Bar of California(2015)]{calbar2015puffing}
+State Bar of California Standing Committee on Professional Responsibility and Conduct.
+Formal Opinion No. 2015-194: Puffing in Negotiations.
+\url{https://www.calbar.ca.gov/sites/default/files/portals/0/documents/ethics/Opinions/2015-194-%2812-0007%29-Puffing-in-Negotiations-FINAL-12-29-15.pdf}.
+
 \bibitem[SettleBench(2026)]{settlebench}
 SettleAgent / SettleBench.
 Planning-Enhanced Multi-Agent Legal Negotiation.
@@ -279,21 +292,61 @@ Proceedings of Machine Learning Research, 2024.
 Amodei, D., Olah, C., Steinhardt, J., Christiano, P., Schulman, J., and Mane, D.
 Concrete Problems in AI Safety.
 arXiv:1606.06565, 2016.
+\url{https://arxiv.org/abs/1606.06565}.
+
+\bibitem[Skalse et al.(2022)]{skalse2022rewardgaming}
+Skalse, J., Howe, N., Krasheninnikov, D., and Krueger, D.
+Defining and Characterizing Reward Gaming.
+NeurIPS, 2022.
+\url{https://proceedings.neurips.cc/paper_files/paper/2022/hash/6447c7a7b1be2b4f1c56f6af477716b3-Abstract-Conference.html}.
 
 \bibitem[Gao et al.(2022)]{gao2022scaling}
 Gao, L., Schulman, J., and Hilton, J.
 Scaling Laws for Reward Model Overoptimization.
 arXiv:2210.10760, 2022.
+\url{https://arxiv.org/abs/2210.10760}.
+
+\bibitem[Pan et al.(2023)]{pan2023machiavelli}
+Pan, A. et al.
+Do the Rewards Justify the Means? Measuring Trade-Offs Between Rewards and Ethical Behavior in the MACHIAVELLI Benchmark.
+ICML, 2023.
+\url{https://proceedings.mlr.press/v202/pan23a.html}.
 
 \bibitem[Guha et al.(2023)]{legalbench}
 Guha, N. et al.
 LegalBench: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models.
 NeurIPS Datasets and Benchmarks, 2023.
+\url{https://openreview.net/forum?id=WqSPQFxFRC}.
+
+\bibitem[Chalkidis et al.(2022)]{lexglue}
+Chalkidis, I. et al.
+LexGLUE: A Benchmark Dataset for Legal Language Understanding in English.
+ACL, 2022.
+\url{https://aclanthology.org/2022.acl-long.297/}.
+
+\bibitem[Perez et al.(2022)]{perez2022redteaming}
+Perez, E. et al.
+Red Teaming Language Models with Language Models.
+EMNLP, 2022.
+\url{https://aclanthology.org/2022.emnlp-main.225/}.
+
+\bibitem[Liang et al.(2022)]{liang2022helm}
+Liang, P. et al.
+Holistic Evaluation of Language Models.
+arXiv:2211.09110, 2022.
+\url{https://arxiv.org/abs/2211.09110}.
 
 \bibitem[Zheng et al.(2023)]{llmjudge}
 Zheng, L. et al.
 Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.
 NeurIPS Datasets and Benchmarks, 2023.
+\url{https://proceedings.neurips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html}.
+
+\bibitem[Liu et al.(2023)]{liu2023geval}
+Liu, Y. et al.
+G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.
+EMNLP, 2023.
+\url{https://aclanthology.org/2023.emnlp-main.153/}.
 
 \end{thebibliography}
 
