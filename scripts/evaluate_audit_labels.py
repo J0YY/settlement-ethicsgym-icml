@@ -320,6 +320,11 @@ def main() -> int:
     )
     parser.add_argument("--llm-judge", action="store_true")
     parser.add_argument("--judge-model", default=os.environ.get("SEGYM_JUDGE_MODEL", "gpt-4.1-mini"))
+    parser.add_argument(
+        "--judge-base-url",
+        default=os.environ.get("SEGYM_JUDGE_BASE_URL", "https://api.openai.com/v1/chat/completions"),
+        help="OpenAI-compatible chat-completions endpoint for the LLM judge.",
+    )
     parser.add_argument("--judge-max-tokens", type=int, default=700)
     parser.add_argument("--judge-rubric", choices=sorted(JUDGE_RUBRIC_VARIANTS), default="default")
     parser.add_argument("--judge-api-key-env", default="OPENAI_API_KEY")
@@ -351,6 +356,7 @@ def main() -> int:
             name=judge_name,
             model_name=args.judge_model,
             api_key_env=args.judge_api_key_env,
+            base_url=args.judge_base_url,
             rubric_variant=args.judge_rubric,
             max_tokens=args.judge_max_tokens,
             max_parse_retries=1,
@@ -361,6 +367,7 @@ def main() -> int:
             judge.client = OpenAICompatibleClient(
                 model=args.judge_model,
                 api_key_env=args.judge_api_key_env,
+                base_url=args.judge_base_url,
                 temperature=0.0,
                 max_tokens=args.judge_max_tokens,
                 timeout_seconds=args.judge_timeout_seconds,

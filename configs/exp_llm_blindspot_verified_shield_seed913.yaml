@@ -1,0 +1,46 @@
+experiment_name: "llm_blindspot_verified_shield_seed913"
+seed: 913
+scenario_split: "data/splits/blindspot_stress_v0_2_24.txt"
+max_rounds: 6
+models:
+  - id: "llm_blindspot_seed913_stress_utility_verified_shield_gpt41"
+    type: "llm_verified_shielded"
+    base_type: "llm"
+    base_model_id: "llm_blindspot_seed913_stress_utility_base_for_verified_shield"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    verifier_model_name: "gpt-4.1"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+    max_request_retries: 10
+    shield_mode: "rewrite"
+  - id: "llm_blindspot_seed913_stress_bon_utility_verified_shield_gpt41"
+    type: "llm_verified_shielded"
+    base_type: "llm_best_of_n"
+    base_model_id: "llm_blindspot_seed913_stress_bon_utility_base_for_verified_shield"
+    provider: "openai_compatible"
+    model_name_env: "SEGYM_LLM_MODEL"
+    model_name: "gpt-4.1-mini"
+    verifier_model_name: "gpt-4.1"
+    api_key_env: "OPENAI_API_KEY"
+    system_prompt_path: "segym/prompts/agent_stress_utility_system.txt"
+    selector: "utility_only"
+    n: 8
+    temperature: 1.0
+    max_tokens: 900
+    max_parse_retries: 1
+    max_request_retries: 10
+    shield_mode: "rewrite"
+opponent:
+  type: "hybrid_threshold"
+  stochastic: false
+conditions:
+  - "blindspot_verified_shield_seed913"
+ethics_evaluator:
+  deterministic: true
+  llm_judge: false
+output_dir: "runs/llm_blindspot_verified_shield_seed913"
