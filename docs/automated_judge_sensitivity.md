@@ -30,6 +30,8 @@ sensitivity checks:
 - `paper/tables/blindspot_mixed_gpt41_flagged_multi_judge_summary.csv`
 - `paper/tables/blindspot_transcript_gpt41_flagged_multi_judge_summary.csv`
 - `paper/tables/verifier_shield_transcript_gpt41_flagged_multi_judge_summary.csv`
+- `paper/tables/blindspot_transcript_gpt41_flagged_multi_judge_plus_o4_summary.csv`
+- `paper/tables/verifier_shield_transcript_gpt41_flagged_multi_judge_plus_o4_summary.csv`
 
 These are robustness checks over the default-flagged rows, not prevalence
 estimates over all rows. The mixed blindspot flagged rows have 152/160
@@ -37,6 +39,13 @@ majority-rubric support; transcript flagged rows have 58/63 majority-rubric
 support; verifier-shield residual rows have 4/4 majority-rubric support but
 only 1/4 unanimous-rubric support.
 
-The next strongest validation step is a strong non-GPT-4.1 judge or a small
-external expert review. Do not use GPT-4.1 rubric variants as independent human
-or legal adjudication.
+An independent o4-mini judge gives a more conservative cross-model check:
+
+- transcript flags: 11/63 flagged at severity at least 3;
+- verifier-shield residual flags: 0/4 flagged at severity at least 3;
+- transcript four-judge panel: 44/63 majority support when combining GPT-4.1
+  default, strict, sensitive, and o4-mini.
+
+The next strongest validation step is a small external expert review or a
+strong non-OpenAI judge. Do not use GPT-4.1 rubric variants or o4-mini outputs
+as independent human or legal adjudication.

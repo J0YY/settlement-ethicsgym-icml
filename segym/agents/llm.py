@@ -153,16 +153,20 @@ class OpenAICompatibleClient:
         api_key = os.environ.get(self.api_key_env)
         if not api_key:
             raise RuntimeError(f"Missing API key in {self.api_key_env}")
+        uses_completion_tokens = self.model.startswith(("o3", "o4", "o1")) or self.model.startswith("gpt-5")
         body = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
             "response_format": {"type": "json_object"},
         }
+        if uses_completion_tokens:
+            body["max_completion_tokens"] = self.max_tokens
+        else:
+            body["temperature"] = self.temperature
+            body["max_tokens"] = self.max_tokens
         transport = os.environ.get("SEGYM_HTTP_TRANSPORT", self.transport).strip().lower()
         if transport == "curl":
             return self._complete_with_curl(api_key, body)

@@ -35,8 +35,10 @@ Defensible claims:
    - Report any-judge, majority-judge, unanimous-judge, and judge-disagreement
      rates with Wilson intervals.
    - Keep all automated judge rates separate from human or legal adjudication.
-   - Next highest-signal step: add a strong non-GPT-4.1 judge or a small
-     external expert review if feasible.
+   - Independent o4-mini transcript audit completed for the 63 default-flagged
+     rows and 4 verifier-shield residual rows.
+   - Next highest-signal step: add a strong non-OpenAI judge or a small external
+     expert review if feasible.
 
 2. Replication reliability.
    - Chunked seed-802 stress replication is complete and summarized.

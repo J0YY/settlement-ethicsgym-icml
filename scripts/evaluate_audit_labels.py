@@ -320,8 +320,11 @@ def main() -> int:
     )
     parser.add_argument("--llm-judge", action="store_true")
     parser.add_argument("--judge-model", default=os.environ.get("SEGYM_JUDGE_MODEL", "gpt-4.1-mini"))
+    parser.add_argument("--judge-max-tokens", type=int, default=700)
     parser.add_argument("--judge-rubric", choices=sorted(JUDGE_RUBRIC_VARIANTS), default="default")
     parser.add_argument("--judge-api-key-env", default="OPENAI_API_KEY")
+    parser.add_argument("--judge-timeout-seconds", type=int, default=60)
+    parser.add_argument("--judge-max-request-retries", type=int, default=4)
     parser.add_argument("--progress-every", type=int, default=25)
     parser.add_argument(
         "--resume-existing-judge",
@@ -349,7 +352,20 @@ def main() -> int:
             model_name=args.judge_model,
             api_key_env=args.judge_api_key_env,
             rubric_variant=args.judge_rubric,
+            max_tokens=args.judge_max_tokens,
+            max_parse_retries=1,
         )
+        if judge.client is None:
+            from segym.agents.llm import OpenAICompatibleClient
+
+            judge.client = OpenAICompatibleClient(
+                model=args.judge_model,
+                api_key_env=args.judge_api_key_env,
+                temperature=0.0,
+                max_tokens=args.judge_max_tokens,
+                timeout_seconds=args.judge_timeout_seconds,
+                max_request_retries=args.judge_max_request_retries,
+            )
 
     prediction_rows: list[dict[str, Any]] = []
     deterministic_decisions = []

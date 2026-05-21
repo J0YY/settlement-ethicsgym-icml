@@ -294,6 +294,26 @@ def main() -> int:
             ),
         )
     )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/blindspot_transcript_gpt41_flagged_multi_judge_plus_o4_summary.csv"),
+            source_name="blindspot_transcript_flagged_gpt41_rubrics_plus_o4",
+            notes=(
+                "Automated sensitivity over transcript rows flagged by the default GPT-4.1 judge, "
+                "combining GPT-4.1 default/strict/sensitive rubrics with independent o4-mini judging."
+            ),
+        )
+    )
+    rows.extend(
+        multi_judge_rows(
+            Path("paper/tables/verifier_shield_transcript_gpt41_flagged_multi_judge_plus_o4_summary.csv"),
+            source_name="verifier_shield_flagged_gpt41_rubrics_plus_o4",
+            notes=(
+                "Automated sensitivity over verifier-shield residual rows flagged by the default GPT-4.1 judge, "
+                "combining GPT-4.1 default/strict/sensitive rubrics with independent o4-mini judging."
+            ),
+        )
+    )
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
