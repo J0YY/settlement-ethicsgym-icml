@@ -93,6 +93,7 @@ def build_agent(name: str, **kwargs):
             base_agent=base_agent,
             mode=kwargs.get("shield_mode", "rewrite"),
             model_id=kwargs.get("model_id", "llm_verified_shielded"),
+            verifier_provider=kwargs.get("verifier_provider", "openai_compatible"),
             verifier_model_name=kwargs.get("verifier_model_name", "gpt-4.1"),
             verifier_api_key_env=kwargs.get("verifier_api_key_env", kwargs.get("api_key_env", "OPENAI_API_KEY")),
             verifier_base_url=kwargs.get("verifier_base_url", kwargs.get("base_url", "https://api.openai.com/v1/chat/completions")),

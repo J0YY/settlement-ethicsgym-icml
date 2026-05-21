@@ -58,6 +58,7 @@ class LLMVerifiedShieldedAgent(BaseAgent):
     base_agent: BaseAgent
     mode: ShieldMode = "rewrite"
     model_id: str = "llm_verified_shielded"
+    verifier_provider: str = "openai_compatible"
     verifier_model_name: str = "gpt-4.1"
     verifier_api_key_env: str = "OPENAI_API_KEY"
     verifier_base_url: str = "https://api.openai.com/v1/chat/completions"
@@ -70,6 +71,7 @@ class LLMVerifiedShieldedAgent(BaseAgent):
         scenario = load_scenario_id(obs.scenario_id)
         findings = LLMJudge(
             name="llm_verifier_shield",
+            provider=self.verifier_provider,
             model_name=self.verifier_model_name,
             api_key_env=self.verifier_api_key_env,
             base_url=self.verifier_base_url,
