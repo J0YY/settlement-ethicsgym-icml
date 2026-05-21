@@ -45,6 +45,7 @@ def build_agent_from_model(model: dict):
         max_parse_retries=model.get("max_parse_retries", 1),
         max_request_retries=model.get("max_request_retries", 4),
         selector=model.get("selector", "utility_only"),
+        verifier_provider=model.get("verifier_provider", "openai_compatible"),
         verifier_model_name=model.get("verifier_model_name", "gpt-4.1"),
         verifier_api_key_env=model.get("verifier_api_key_env", model.get("api_key_env", "OPENAI_API_KEY")),
         verifier_base_url=model.get("verifier_base_url", model.get("base_url", "https://api.openai.com/v1/chat/completions")),
