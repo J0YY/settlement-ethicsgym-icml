@@ -1,8 +1,15 @@
+import json
 import os
 import urllib.error
 
 from segym.agents.factory import build_agent
-from segym.agents.llm import OpenAICompatibleClient, extract_json_object, normalize_action_payload, observation_prompt
+from segym.agents.llm import (
+    AnthropicMessagesClient,
+    OpenAICompatibleClient,
+    extract_json_object,
+    normalize_action_payload,
+    observation_prompt,
+)
 from segym.env import SettlementEthicsEnv
 from segym.types import AgentAction
 
@@ -137,6 +144,37 @@ def test_openai_client_does_not_retry_nontransient_http_error(monkeypatch):
     else:
         raise AssertionError("expected nontransient HTTP error")
     assert len(calls) == 1
+
+
+def test_anthropic_client_uses_messages_api_and_extracts_text(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    calls = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b'{"content": [{"type": "text", "text": "{\\"ok\\": true}"}]}'
+
+    def urlopen(request, timeout):
+        calls.append((request, timeout, json.loads(request.data.decode("utf-8"))))
+        return Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    client = AnthropicMessagesClient(model="claude-test", max_request_retries=0)
+
+    assert client.complete("system", "user") == '{"ok": true}'
+    request, timeout, body = calls[0]
+    assert timeout == 60
+    assert request.headers["X-api-key"] == "test-key"
+    assert request.headers["Anthropic-version"] == "2023-06-01"
+    assert body["model"] == "claude-test"
+    assert body["system"] == "system"
+    assert body["messages"] == [{"role": "user", "content": "user"}]
 
 
 def test_llm_agent_retries_and_logs_parse_failure(monkeypatch):

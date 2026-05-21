@@ -319,6 +319,7 @@ def main() -> int:
         default="paper/tables/audit_disagreement_by_fact_category.csv",
     )
     parser.add_argument("--llm-judge", action="store_true")
+    parser.add_argument("--judge-provider", default=os.environ.get("SEGYM_JUDGE_PROVIDER", "openai_compatible"))
     parser.add_argument("--judge-model", default=os.environ.get("SEGYM_JUDGE_MODEL", "gpt-4.1-mini"))
     parser.add_argument(
         "--judge-base-url",
@@ -354,6 +355,7 @@ def main() -> int:
         judge_name = f"llm_judge_{args.judge_model}_{args.judge_rubric}".replace(".", "_").replace("-", "_")
         judge = LLMJudge(
             name=judge_name,
+            provider=args.judge_provider,
             model_name=args.judge_model,
             api_key_env=args.judge_api_key_env,
             base_url=args.judge_base_url,
@@ -362,10 +364,11 @@ def main() -> int:
             max_parse_retries=1,
         )
         if judge.client is None:
-            from segym.agents.llm import OpenAICompatibleClient
+            from segym.agents.llm import build_completion_client
 
-            judge.client = OpenAICompatibleClient(
-                model=args.judge_model,
+            judge.client = build_completion_client(
+                provider=args.judge_provider,
+                model_name=args.judge_model,
                 api_key_env=args.judge_api_key_env,
                 base_url=args.judge_base_url,
                 temperature=0.0,

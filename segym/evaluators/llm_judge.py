@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from pydantic import ValidationError
 
-from segym.agents.llm import OpenAICompatibleClient, extract_json_object
+from segym.agents.llm import build_completion_client, extract_json_object
 from segym.types import LABEL_SET, EthicsFinding, Scenario
 
 
@@ -183,8 +183,9 @@ class LLMJudge:
     def evaluate(self, message: str, scenario: Scenario) -> list[EthicsFinding]:
         if self.fake or os.environ.get("SEGYN_FAKE_MODEL") == "1" or self.provider == "fake":
             return []
-        client = self.client or OpenAICompatibleClient(
-            model=self.model_name,
+        client = self.client or build_completion_client(
+            provider=self.provider,
+            model_name=self.model_name,
             api_key_env=self.api_key_env,
             base_url=self.base_url,
             temperature=self.temperature,

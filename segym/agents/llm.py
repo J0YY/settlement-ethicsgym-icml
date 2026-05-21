@@ -232,6 +232,143 @@ class OpenAICompatibleClient:
 
 
 @dataclass
+class AnthropicMessagesClient:
+    model: str
+    api_key_env: str = "ANTHROPIC_API_KEY"
+    base_url: str = "https://api.anthropic.com/v1/messages"
+    temperature: float = 0.2
+    max_tokens: int = 800
+    timeout_seconds: int = 60
+    max_request_retries: int = 4
+    retry_base_seconds: float = 2.0
+    transport: str = "urllib"
+
+    def _retry_delay(self, attempt: int) -> float:
+        return min(30.0, self.retry_base_seconds * (2**attempt))
+
+    def _should_retry_http(self, status_code: int) -> bool:
+        return status_code in {408, 409, 425, 429, 500, 502, 503, 504, 529}
+
+    def complete(self, system_prompt: str, user_prompt: str) -> str:
+        api_key = os.environ.get(self.api_key_env)
+        if not api_key:
+            raise RuntimeError(f"Missing API key in {self.api_key_env}")
+        body = {
+            "model": self.model,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+        transport = os.environ.get("SEGYM_HTTP_TRANSPORT", self.transport).strip().lower()
+        if transport == "curl":
+            return self._complete_with_curl(api_key, body)
+        encoded_body = json.dumps(body).encode("utf-8")
+        attempts = max(int(self.max_request_retries), 0) + 1
+        last_error: Exception | None = None
+        for attempt in range(attempts):
+            request = urllib.request.Request(
+                self.base_url,
+                data=encoded_body,
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                return self._extract_text(data)
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                if not self._should_retry_http(exc.code) or attempt == attempts - 1:
+                    raise LLMResponseError(f"LLM provider HTTP {exc.code}: {detail}") from exc
+                last_error = exc
+            except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as exc:
+                if attempt == attempts - 1:
+                    raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {exc}") from exc
+                last_error = exc
+            time.sleep(self._retry_delay(attempt))
+        raise LLMResponseError(f"LLM provider request failed after {attempts} attempts: {last_error}")
+
+    def _complete_with_curl(self, api_key: str, body: dict[str, Any]) -> str:
+        attempts = max(int(self.max_request_retries), 0) + 1
+        last_error = ""
+        for attempt in range(attempts):
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8") as config:
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8") as payload:
+                    payload.write(json.dumps(body))
+                    payload.flush()
+                    config.write(f'url = "{self.base_url}"\n')
+                    config.write('request = "POST"\n')
+                    config.write(f'header = "x-api-key: {api_key}"\n')
+                    config.write('header = "anthropic-version: 2023-06-01"\n')
+                    config.write('header = "Content-Type: application/json"\n')
+                    config.write(f'data = "@{payload.name}"\n')
+                    config.write(f"max-time = {int(self.timeout_seconds)}\n")
+                    config.write("silent\nshow-error\nfail-with-body\n")
+                    config.flush()
+                    proc = subprocess.run(
+                        ["curl", "--config", config.name],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+            if proc.returncode == 0:
+                return self._extract_text(json.loads(proc.stdout))
+            last_error = (proc.stderr or proc.stdout).strip()
+            if attempt == attempts - 1:
+                break
+            time.sleep(self._retry_delay(attempt))
+        raise LLMResponseError(f"LLM provider curl request failed after {attempts} attempts: {last_error}")
+
+    def _extract_text(self, data: dict[str, Any]) -> str:
+        chunks = []
+        for item in data.get("content", []):
+            if isinstance(item, dict) and item.get("type") == "text":
+                chunks.append(str(item.get("text", "")))
+        text = "".join(chunks).strip()
+        if not text:
+            raise LLMResponseError("Anthropic response did not contain text content")
+        return text
+
+
+def build_completion_client(
+    *,
+    provider: str,
+    model_name: str,
+    api_key_env: str,
+    base_url: str,
+    temperature: float,
+    max_tokens: int,
+    timeout_seconds: int = 60,
+    max_request_retries: int = 4,
+) -> OpenAICompatibleClient | AnthropicMessagesClient:
+    provider_name = provider.strip().lower()
+    if provider_name == "anthropic":
+        return AnthropicMessagesClient(
+            model=model_name,
+            api_key_env=api_key_env,
+            base_url=base_url or "https://api.anthropic.com/v1/messages",
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+            max_request_retries=max_request_retries,
+        )
+    return OpenAICompatibleClient(
+        model=model_name,
+        api_key_env=api_key_env,
+        base_url=base_url,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout_seconds=timeout_seconds,
+        max_request_retries=max_request_retries,
+    )
+
+
+@dataclass
 class LLMNegotiator(BaseAgent):
     model_id: str = "llm"
     provider: str = "openai_compatible"
@@ -256,8 +393,9 @@ class LLMNegotiator(BaseAgent):
 
         system_prompt = load_prompt(self.system_prompt_path)
         user_prompt = observation_prompt(obs)
-        client = OpenAICompatibleClient(
-            model=self.model_name,
+        client = build_completion_client(
+            provider=self.provider,
+            model_name=self.model_name,
             api_key_env=self.api_key_env,
             base_url=self.base_url,
             temperature=self.temperature,
