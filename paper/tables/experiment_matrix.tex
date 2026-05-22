@@ -8,8 +8,9 @@ Generated LLM matrix & real LLM baseline & 24 & 6 & deterministic + audit \\
 BoN scaling/lambda & sample-budget sensitivity & 48 & 13 & deterministic \\
 Shield ablation & mitigation tradeoff & 48 & 3 & deterministic \\
 Stratified audit & evaluator calibration & 400 rows & 5 strata & GPT-4.1 + multi-judge \\
-Blindspot BoN audit & detector overfitting & 24 & 4 & GPT-4.1; more judges pending \\
-Verifier shield & mitigation validation & 24 & 2 & GPT-4.1; more judges pending \\
-Cross-model replication & model sensitivity & 48 & 2 models & deterministic \\
+Blindspot BoN audit & detector overfitting & 24 & 4 & GPT-4.1 + Claude + o4-mini \\
+Verifier shield & mitigation validation & 24 & 2 & GPT-4.1 + Claude sensitivity \\
+Cross-model replication & model sensitivity & 48 & GPT-4.1, nano, Claude & deterministic \\
+Public-record-grounded probe & external-validity check & 12 & 4 & deterministic \\
 \bottomrule
 \end{tabular}
