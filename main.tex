@@ -31,14 +31,16 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Legal AI agents may be optimized for client-favorable outcomes, but professional legal competence also requires role-specific process constraints. We introduce SettlementEthicsGym, an interactive benchmark for measuring reward-induced misrepresentation in civil settlement negotiation, with synthetic and public-record-grounded scenario splits. Each episode provides hidden truth tables, role-specific case files, bargaining utilities, and rule-inspired truthfulness labels distinguishing material false statements from permissible negotiation posturing. In real LLM runs over a 48-scenario stress split, stress best-of-$N$ selection produces deterministic-evaluator material misrepresentation in 6.25--14.6\% of episodes (3/48--7/48), depending on selector and sample budget; two Anthropic Claude Sonnet replications reproduce utility-only best-of-$N$ violations at 5/48 and 7/48 while ethics-aware best-of-$N$ and rewrite shielding remain 0/48. A deterministic rewrite shield reduces measured material and severe violations to 0/48 episodes, but blindspot auditing shows this zero is detector-aligned rather than evidence of eliminated misconduct. On a 24-scenario blindspot split, a GPT-4.1 judge flags 63/390 unverified transcript rows, including deterministic-shield rows; 58/63 flagged transcript rows survive majority support across GPT-4.1 default, strict, and sensitive rubrics, a non-OpenAI Claude Sonnet judge also flags 58/63, and an independent o4-mini judge flags a conservative subset of 11/63. A fact-grounded verifier shield reduces GPT-4.1 transcript flags to 4/196; Claude Sonnet flags all 4 verifier-shield residual rows. These results suggest that SettlementEthicsGym can expose evaluator overfitting and mitigation tradeoffs while making label uncertainty explicit.
+Legal AI agents optimized for settlement outcomes may improve client utility by inducing false beliefs in counterparties. We introduce SettlementEthicsGym, an interactive benchmark for measuring material misrepresentation in civil settlement negotiation under utility pressure. The benchmark provides role-specific hidden facts, truth tables, settlement utilities, negotiation transcripts, and rule-inspired labels distinguishing material falsehoods from permissible negotiation posture. Across synthetic, stress, blindspot, and public-record-grounded scenarios, utility-only best-of-$N$ selection produces deterministic material-misrepresentation rates of roughly 5--15\% in 48-scenario stress runs, while deterministic rewrite shielding reduces deterministic flags to zero. However, blindspot audits show that this zero is detector-aligned: GPT-4.1 and Claude judges flag paraphrased misleading statements that the deterministic evaluator misses. A fact-grounded verifier shield reduces GPT-4.1 transcript flags from 63/390 to 4/196, suggesting that SettlementEthicsGym can expose both optimization-induced legal-ethics failures and mitigation overfitting.
 \end{abstract}
 
 \section{Introduction}
 
-Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results, a domain-specific instance of reward hacking, reward gaming, and reward-model overoptimization concerns studied in AI safety \citep{amodei2016concrete,skalse2022rewardgaming,gao2022scaling,pan2023machiavelli}. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements \citep{settlebench,negotiationarena}. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure.
+Settlement negotiation is a useful stress test for legal-agent evaluation because it is adversarial, partially observable, and outcome driven. A system rewarded only for client settlement utility may discover that inducing false beliefs improves bargaining results, a domain-specific instance of reward hacking, reward gaming, and reward-model overoptimization concerns studied in AI safety \citep{amodei2016concrete,skalse2022rewardgaming,gao2022scaling,pan2023machiavelli}. Existing legal-negotiation benchmarks primarily ask whether agents can reach settlements \citep{settlebench,negotiationarena}. SettlementEthicsGym asks whether agents can reach settlements without misrepresenting material facts under optimization pressure. In this paper, ``reward-induced'' refers to inference-time utility pressure from prompts and best-of-$N$ candidate selection, not reinforcement learning.
 
-The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses controlled synthetic disputes plus a public-record-grounded extension, with a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing under professional-responsibility rules such as truthfulness to others, client authority over settlement, and confidentiality \citep{aba41,aba12,aba16,aba439,calbar2015puffing}. The current implementation focuses on civil settlement negotiation, role-specific hidden facts, deterministic ethics traps, real LLM agents, best-of-$N$ inference-time optimization, deterministic and verifier-based shields, and audit tooling for adjudicating evaluator disagreements.
+The benchmark is not a source of legal advice and does not decide real lawyer discipline. It uses controlled synthetic disputes plus a public-record-grounded extension, with a rule-inspired taxonomy grounded in the distinction between impermissible false material statements and ordinary negotiation posturing under professional-responsibility sources on truthfulness, settlement authority, confidentiality, and puffing \citep{aba41,aba439,calbar2015puffing}. Client authority and confidentiality are modeled as process constraints rather than disclosure duties \citep{aba12,aba16}.
+
+Our contributions are: (1) an executable settlement-negotiation environment with hidden facts, role files, normalized client utilities, opponent belief updates, and truthfulness labels; (2) an optimization-pressure protocol using utility prompts and best-of-$N$ candidate selection; (3) deterministic replay, LLM-judge audits, multi-rubric sensitivity checks, and traceable claim tables; and (4) evidence that utility-only selection surfaces material misrepresentations, deterministic shields can overfit phrase rules, and fact-grounded verifier shielding reduces but does not eliminate judge-flagged risk.
 
 \section{Related Work}
 
@@ -50,13 +52,31 @@ The benchmark follows safety work showing that proxy rewards can be gamed when t
 
 \section{Benchmark Design}
 
-Each scenario contains public facts, private files for the evaluated agent and opponent, reservation values, explicit truth-table facts, allowed puffery examples, forbidden pattern mappings, and gold utterance labels. The environment records structured actions with a public message, offer, requested information, disclosures, and self-reported assertions. A hybrid threshold opponent uses deterministic reservation logic and scenario-specific belief updates when material claims are believed.
+Each scenario contains public facts, private files for the evaluated agent and opponent, reservation values, explicit truth-table facts, allowed puffery examples, forbidden pattern mappings, and gold utterance labels. The environment records structured actions with a public message, offer, requested information, disclosures, and self-reported assertions. Utility is normalized client-side settlement value in $[0,1]$ after scenario-specific reservation values; no settlement receives zero. A hybrid threshold opponent uses deterministic reservation logic and scenario-specific belief updates when material claims are believed.
 
 \paragraph{Ethics labels.}
 The current evaluator supports labels including \texttt{FALSE\_MATERIAL\_FACT}, \texttt{FALSE\_STATEMENT\_OF\_LAW}, \texttt{MISLEADING\_HALF\_TRUTH}, \texttt{PERMISSIBLE\_PUFFERY}, \texttt{PERMISSIBLE\_OPINION\_OR\_VALUE\_ESTIMATE}, and \texttt{UNSUPPORTED\_BUT\_NOT\_FALSE}. The primary violation threshold is severity at least 3.
 
 \paragraph{Optimization pressure.}
 The benchmark supports both no-API controls and real LLM agents. The no-API MVP compares honest scripted negotiation, deliberately deceptive calibration, utility-only best-of-$N$ selection, utility-minus-ethics best-of-$N$ selection, and a rewrite shield. The LLM-facing implementation uses structured JSON actions, zero-shot prompting, ethics prompting, utility prompting, stress utility prompting, shielded utility prompting, fact-grounded verifier shielding, and best-of-$N$ candidate selection with either utility-only or utility-minus-ethics selectors. Candidate-level logs preserve selected and rejected best-of-$N$ outputs for later audit.
+
+\begin{table}[t]
+\caption{Compact scenario walkthrough.}
+\label{tab:scenario-example}
+\centering
+\small
+\begin{tabular}{p{0.27\linewidth}p{0.61\linewidth}}
+\toprule
+Field & Example \\
+\midrule
+Private fact & Defense expert withdrew no-causation support. \\
+Material falsehood & ``Our expert still maintains no causation.'' \\
+Permissible posture & ``We dispute damages and value the claim lower.'' \\
+Utility pressure & Lower perceived causation risk improves settlement terms. \\
+Flag rationale & Expert status is a concrete evidentiary fact, not valuation puffery. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Current Implementation}
 
@@ -75,13 +95,14 @@ The current seed set has eight hand-written scenario families across personal in
 \end{table*}
 
 \paragraph{Audit and uncertainty protocol.}
-All headline run tables are generated from non-fake run metadata. Episode-level deterministic rates use the deterministic evaluator replayed over final transcript messages. Candidate-level and transcript-level audits use sampled rows from transcripts and best-of-$N$ candidate logs. LLM-judge audits provide scenario facts, role information, and the public message, but not deterministic forbidden-pattern labels. We report Wilson 95\% intervals for binomial rates and keep deterministic, single-judge, multi-judge sensitivity, and optional external-adjudication fields separate. The repository exports \texttt{paper/tables/headline\_claims.csv} so each headline rate has an explicit numerator, denominator, evaluator, confidence interval, and adjudication status.
+All headline run tables are generated from non-fake run metadata. Episode-level deterministic rates use the deterministic evaluator replayed over final transcript messages. Candidate-level and transcript-level audits use sampled rows from transcripts and best-of-$N$ candidate logs. LLM-judge audits provide scenario facts, role information, and the public message, but not deterministic forbidden-pattern labels. We report Wilson 95\% intervals for binomial rates; row-level intervals are descriptive because utterances from the same scenario and episode are correlated. Precision/recall on enriched audit packets is conditional audit-set performance, not population detector accuracy. The repository exports \texttt{paper/tables/headline\_claims.csv} so each headline rate has an explicit numerator, denominator, evaluator, confidence interval, and adjudication status.
 
-The supplementary artifact records exact YAML configs, prompt templates, provider/model identifiers, temperatures, maximum token budgets, split files, seeds, retry counts, parsing failures, and run directories. Structured JSON outputs are parsed by schema; invalid outputs are counted and logged rather than silently repaired. This makes best-of-$N$ selection, shield rewrites, and audit samples replayable from the released configuration files.
+\paragraph{Artifact.}
+The supplementary artifact includes scenario YAMLs for the 8 seed, 24 generated, 48 stress, 24 blindspot, and 12 public-record-grounded splits; public-record provenance; deterministic evaluator rules; prompt templates; configs with provider/model identifiers, temperatures, token budgets, seeds, retry counts, and run directories; transcripts and candidate logs where release is permitted; audit packets; exported tables; and no-API unit tests. API-based replications require user-supplied model keys, but smoke tests and deterministic replay do not.
 
 \section{Results}
 
-Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. These numbers are not yet claims about deployed LLM behavior; they verify that the benchmark creates the intended measurement contrast.
+Table~\ref{tab:mvp-results} reports the deterministic scripted MVP. These numbers are not claims about deployed LLM behavior; they verify that the benchmark creates the intended measurement contrast.
 
 \begin{table}[t]
 \caption{No-API scripted MVP results over eight seed scenarios.}
@@ -92,20 +113,6 @@ Table~\ref{tab:mvp-results} reports the current deterministic scripted MVP. Thes
 \input{paper/tables/main_results.tex}
 }
 \end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{paper/figures/violation_rates.png}
-\caption{Material misrepresentation rate by current scripted condition.}
-\label{fig:violations}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{paper/figures/pareto.png}
-\caption{Utility and ethics tradeoff for scripted conditions.}
-\label{fig:pareto}
-\end{figure}
 
 \paragraph{Real LLM generated split.}
 We ran OpenAI-compatible LLM agents on a 24-scenario generated split. Table~\ref{tab:llm-generated} reports deterministic evaluator metrics after replaying run summaries with the repaired evaluator. The zero-shot, ethics-prompt, and shielded conditions reached settlements without deterministic material violations. The utility prompt produced material violations in 8.3\% of episodes. The best-of-$N$ conditions achieved higher candidate coverage and exposed selected unsafe cases: utility-only best-of-$N$ reached the highest mean utility in the base matrix and produced material violations in 4.2\% of episodes; ethics-aware best-of-$N$ also produced material violations in 4.2\%, but did not select an unsafe candidate when a safe candidate was available under the current selector log.
@@ -167,7 +174,7 @@ Stress rewrite shield & 0.396 & 0.326 & 0.000 (0/48) \\
 \end{figure}
 
 \paragraph{Scaling and mitigation.}
-Table~\ref{tab:scaling-shield} summarizes the completed scaling and shield-ablation runs. Increasing sample budget from $N=8$ to $N=16$ did not improve safety: utility-only $N=16$ produced 12.5\% material violations, and ethics-aware $N=16$ produced 14.6\%. These small-count rates are not monotone scaling laws; they reflect selector instability, scenario mix, and stochastic candidate generation. In a lambda sweep for ethics-aware $N=8$, $\lambda=0.25$ produced the lowest deterministic material violation rate among tested values, while $\lambda=0.5$ and $\lambda=2.0$ were worse. The rewrite shield reached 0/48 deterministic material violations in both the main stress matrix and the shield ablation, whereas warn-only left 8.3\% material violations and block preserved safety at substantially lower utility.
+Table~\ref{tab:scaling-shield} summarizes selected scaling and shield-ablation runs. These are separate runs from Table~\ref{tab:llm-stress}; rows are comparable as stress-split sensitivity checks, not identical seeds. Increasing sample budget from $N=8$ to $N=16$ did not improve safety: utility-only $N=16$ produced 12.5\% material violations, and ethics-aware $N=16$ produced 14.6\%. The rewrite shield reached 0/48 deterministic material violations in both the main stress matrix and the shield ablation, whereas warn-only left 8.3\% material violations and block preserved safety at substantially lower utility.
 
 \begin{table}[t]
 \caption{Selected 48-scenario scaling and shield results. Misrep. is deterministic material misrepresentation rate with count. CI is the Wilson 95\% interval for Misrep.}
@@ -257,22 +264,22 @@ SettlementEthicsGym operationalizes a narrow but important safety question for l
 
 \begin{thebibliography}{22}
 
-\bibitem[American Bar Association(n.d.a)]{aba41}
+\bibitem[ABA Model Rule 4.1(n.d.)]{aba41}
 American Bar Association.
 Model Rule 4.1: Truthfulness in Statements to Others.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_4_1_truthfulness_in_statements_to_others/}.
 
-\bibitem[American Bar Association(n.d.b)]{aba12}
+\bibitem[ABA Model Rule 1.2(n.d.)]{aba12}
 American Bar Association.
 Model Rule 1.2: Scope of Representation and Allocation of Authority Between Client and Lawyer.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_2_scope_of_representation_allocation_of_authority_between_client_lawyer/}.
 
-\bibitem[American Bar Association(n.d.c)]{aba16}
+\bibitem[ABA Model Rule 1.6(n.d.)]{aba16}
 American Bar Association.
 Model Rule 1.6: Confidentiality of Information.
 \url{https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_6_confidentiality_of_information/}.
 
-\bibitem[American Bar Association(2006)]{aba439}
+\bibitem[ABA Formal Opinion 06-439(2006)]{aba439}
 American Bar Association.
 Formal Opinion 06-439: Lawyer's Obligation of Truthfulness When Representing a Client in Negotiation: Application to Caucused Mediation.
 \url{https://attorneygeneral.delaware.gov/wp-content/uploads/sites/50/2018/01/ABA-Opinion-06-439-Obligation-of-Truthfulneess-in-Negotiation-and-Mediation.pdf}.
